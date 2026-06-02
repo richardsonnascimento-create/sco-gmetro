@@ -1,0 +1,43 @@
+<script>
+    const Validation = {
+        /**
+         * Valida um endereço de e-mail.
+         * @param {string} email O e-mail a ser validado.
+         * @returns {boolean} True se o e-mail for válido, false caso contrário.
+         */
+        validateEmail: function(email) {
+            const re = /^(([^<>()[\]\\.,;:\s@\"]+(\.[^<>()[\]\\.,;:\s@\"]+)*)|(\".+\"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(String(email).toLowerCase());
+        },
+
+        /**
+         * Valida uma senha.
+         * @param {string} password A senha a ser validada.
+         * @returns {boolean} True se a senha for válida, false caso contrário.
+         */
+        validatePassword: function(password) {
+            return password.length >= 6; // Exemplo: senha com no mínimo 6 caracteres
+        },
+
+        /**
+         * Valida um nome de usuário.
+         * @param {string} username O nome de usuário a ser validado.
+         * @returns {boolean} True se o nome de usuário for válido, false caso contrário.
+         */
+        validateUsername: function(username) {
+            return username.length >= 3; // Exemplo: nome de usuário com no mínimo 3 caracteres
+        },
+
+        /**
+         * Alterna a visibilidade de um campo de senha.
+         * @param {string} inputId O ID do campo de input da senha.
+         * @param {boolean} isChecked Se o checkbox está marcado (true para mostrar, false para ocultar).
+         */
+        togglePasswordVisibility: function(inputId, isChecked) {
+            const passwordInput = document.getElementById(inputId);
+            if (passwordInput) {
+                passwordInput.type = isChecked ? 'text' : 'password';
+            }
+        }
+    };
+</script>

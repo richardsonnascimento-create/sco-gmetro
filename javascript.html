@@ -1,0 +1,249 @@
+<script>
+    // Namespace principal para organizar o código JavaScript
+    const App = {
+        // Inicializa a aplicação com tratamento de erro robusto
+        init: function() {
+            try {
+                this.bindUIActions();
+                this.initNavbarLogic();
+                console.log('App inicializado com sucesso.');
+            } catch (error) {
+                console.error('Erro durante a inicialização do App:', error);
+            }
+        },
+
+        // Gerencia os eventos da interface do usuário (Login/Registro)
+        bindUIActions: function() {
+            const container = document.querySelector('.container');
+            const registerBtn = document.querySelector('.register-btn');
+            const loginBtn = document.querySelector('.login-btn');
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const showLoginPassword = document.getElementById('showLoginPassword');
+            const showRegisterPassword = document.getElementById('showRegisterPassword');
+            const logoutBtn = document.getElementById('logoutBtn');
+
+            if (registerBtn && container) {
+                registerBtn.addEventListener('click', () => {
+                    container.classList.add('active');
+                });
+            }
+
+            if (loginBtn && container) {
+                loginBtn.addEventListener('click', () => {
+                    container.classList.remove('active');
+                });
+            }
+
+            if (loginForm) {
+                loginForm.addEventListener('submit', this.handleLoginSubmit.bind(this));
+            }
+            if (registerForm) {
+                registerForm.addEventListener('submit', this.handleRegisterSubmit.bind(this));
+            }
+
+            if (showLoginPassword) {
+                showLoginPassword.addEventListener('change', (event) => {
+                    Validation.togglePasswordVisibility('loginPassword', event.target.checked);
+                });
+            }
+
+            if (showRegisterPassword) {
+                showRegisterPassword.addEventListener('change', (event) => {
+                    Validation.togglePasswordVisibility('registerPassword', event.target.checked);
+                });
+            }
+
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', this.handleLogout.bind(this));
+            }
+        },
+
+        // Inicializa a lógica de navegação responsiva da Navbar
+        initNavbarLogic: function() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('show');
+                    navToggle.classList.toggle('active');
+                });
+            }
+
+            // Dropdowns responsivos no Mobile (telas <= 768px)
+            const dropdowns = document.querySelectorAll('.nav-item.dropdown > a');
+            dropdowns.forEach(dropdown => {
+                dropdown.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 768) {
+                        e.preventDefault();
+                        const parent = dropdown.parentElement;
+                        if (parent) {
+                            parent.classList.toggle('open');
+                        }
+                    }
+                });
+            });
+        },
+
+        // Lida com o envio do formulário de login
+        handleLoginSubmit: function(event) {
+            event.preventDefault();
+            console.log('Tentativa de login...');
+            Loading.show();
+
+            const emailInput = document.getElementById('loginEmail');
+            const passwordInput = document.getElementById('loginPassword');
+
+            if (!emailInput || !passwordInput) {
+                alert('Erro nos campos do formulário.');
+                Loading.hide();
+                return;
+            }
+
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            if (!Validation.validateEmail(email)) {
+                alert('Por favor, insira um e-mail válido.');
+                Loading.hide();
+                return;
+            }
+            if (!Validation.validatePassword(password)) {
+                alert('A senha deve ter pelo menos 6 caracteres.');
+                Loading.hide();
+                return;
+            }
+
+            // Chama a função do lado do servidor GAS
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        this.handleLoginResponse(response, email);
+                    })
+                    .withFailureHandler(this.handleAuthFailure)
+                    .processLogin(email, password);
+            } else {
+                // Simulação local caso não esteja rodando em ambiente GAS
+                console.warn('google.script.run não disponível, simulando sucesso local.');
+                setTimeout(() => {
+                    this.handleLoginResponse({ success: true, message: 'Login Simulado!' }, email);
+                }, 1000);
+            }
+        },
+
+        // Lida com a resposta do servidor após a tentativa de login
+        handleLoginResponse: function(response, email) {
+            Loading.hide();
+            if (response.success) {
+                // Configura o email do usuário na navbar
+                const userDisplay = document.getElementById('userDisplayName');
+                if (userDisplay) {
+                    userDisplay.textContent = email;
+                }
+                
+                // Transiciona suavemente as telas de Login para App Screen
+                const loginScreen = document.getElementById('loginScreen');
+                const appScreen = document.getElementById('appScreen');
+                
+                if (loginScreen && appScreen) {
+                    loginScreen.style.display = 'none';
+                    appScreen.style.display = 'block';
+                    
+                    // Altera o background do body para o estilo da aplicação
+                    document.body.style.background = '#f4f6fb';
+                    document.body.style.alignItems = 'stretch';
+                }
+            } else {
+                alert(response.message);
+            }
+        },
+
+        // Lida com o envio do formulário de registro
+        handleRegisterSubmit: function(event) {
+            event.preventDefault();
+            console.log('Tentativa de registro...');
+            Loading.show();
+
+            const usernameInput = document.getElementById('registerUser');
+            const emailInput = document.getElementById('registerEmail');
+            const passwordInput = document.getElementById('registerPassword');
+
+            if (!usernameInput || !emailInput || !passwordInput) {
+                alert('Erro nos campos de formulário.');
+                Loading.hide();
+                return;
+            }
+
+            const username = usernameInput.value;
+            const email = emailInput.value;
+            const password = passwordInput.value;
+
+            if (!Validation.validateUsername(username)) {
+                alert('O nome de usuário deve ter pelo menos 3 caracteres.');
+                Loading.hide();
+                return;
+            }
+            if (!Validation.validateEmail(email)) {
+                alert('Por favor, insira um e-mail válido.');
+                Loading.hide();
+                return;
+            }
+            if (!Validation.validatePassword(password)) {
+                alert('A senha deve ter pelo menos 6 caracteres.');
+                Loading.hide();
+                return;
+            }
+
+            setTimeout(() => {
+                Loading.hide();
+                alert('Registro bem-sucedido! Por favor, faça login.');
+                const container = document.querySelector('.container');
+                if (container) {
+                    container.classList.remove('active'); // Volta para o login
+                }
+            }, 1000);
+        },
+
+        // Lida com o logout do sistema
+        handleLogout: function() {
+            Loading.show();
+            setTimeout(() => {
+                Loading.hide();
+                // Retorna para a tela de login
+                const loginScreen = document.getElementById('loginScreen');
+                const appScreen = document.getElementById('appScreen');
+                const loginForm = document.getElementById('loginForm');
+                
+                if (loginScreen && appScreen) {
+                    appScreen.style.display = 'none';
+                    loginScreen.style.display = 'block';
+                    
+                    // Restaura os inputs de login
+                    if (loginForm) {
+                        loginForm.reset();
+                    }
+                    
+                    // Restaura o background do body para o gradiente original
+                    document.body.style.background = 'linear-gradient(90deg, var(--secondary-color), var(--primary-color))';
+                    document.body.style.alignItems = 'center';
+                }
+            }, 500);
+        },
+
+        // Lida com falhas de comunicação com o servidor GAS
+        handleAuthFailure: function(error) {
+            Loading.hide();
+            console.error('Erro na comunicação com o servidor:', error);
+            alert('Ocorreu um erro. Por favor, tente novamente mais tarde.');
+        }
+    };
+
+    // Inicializa a aplicação quando o DOM estiver completamente carregado
+    document.addEventListener('DOMContentLoaded', () => {
+        App.init();
+        if (typeof Loading !== 'undefined') {
+            Loading.hide(); // Garante a desativação da tela de carregamento inicial
+        }
+    });
+</script>

@@ -1,0 +1,47 @@
+<nav class="app-navbar">
+    <div class="nav-container">
+        <a class="nav-logo" href="#">SCO</a>
+        
+        <button class="nav-toggle" id="navToggle" aria-label="Toggle navigation">
+            <span class="hamburger"></span>
+        </button>
+
+        <div class="nav-menu" id="navMenu">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a class="nav-link active" href="#">Home</a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#">
+                        Cadastro <i class="bx bx-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Proprietário</a></li>
+                        <li><a class="dropdown-item" href="#">Serviços</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#">
+                        Consulta <i class="bx bx-chevron-down"></i>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#">Permissionárias</a></li>
+                        <li><a class="dropdown-item" href="#">Serviços a fazer</a></li>
+                        <li><a class="dropdown-item" href="#">Todos os Serviços</a></li>
+                        <li><a class="dropdown-item" href="#">Atestado e Termo</a></li>
+                        <li><a class="dropdown-item" href="#">Relatório</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item user-profile">
+                    <div class="user-info">
+                        <i class="bx bxs-user-circle user-avatar"></i>
+                        <span id="userDisplayName">usuario@example.com</span>
+                    </div>
+                    <button class="logout-btn" id="logoutBtn" title="Sair do sistema">
+                        <i class="bx bx-log-out"></i> Sair
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

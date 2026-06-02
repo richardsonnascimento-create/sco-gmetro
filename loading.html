@@ -1,0 +1,27 @@
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+</div>
+
+<script>
+    const Loading = {
+        overlay: document.getElementById('loadingOverlay'),
+
+        /**
+         * Exibe o overlay de carregamento.
+         */
+        show: function() {
+            if (this.overlay) {
+                this.overlay.style.display = 'flex';
+            }
+        },
+
+        /**
+         * Oculta o overlay de carregamento.
+         */
+        hide: function() {
+            if (this.overlay) {
+                this.overlay.style.display = 'none';
+            }
+        }
+    };
+</script>
