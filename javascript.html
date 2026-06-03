@@ -1,4 +1,42 @@
 <script>
+    // Namespace para gerenciar mensagens inline
+    const Message = {
+        show: function(text, type = 'info') {
+            const container = document.getElementById('messageContainer');
+            if (!container) return;
+
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            
+            const icons = {
+                success: '✓',
+                error: '✕',
+                info: 'ℹ'
+            };
+            
+            messageDiv.innerHTML = `
+                <span class="message-icon">${icons[type] || icons.info}</span>
+                <span class="message-text">${text}</span>
+            `;
+            
+            container.innerHTML = '';
+            container.appendChild(messageDiv);
+            container.classList.add('show');
+            
+            // Auto-hide após 5 segundos
+            setTimeout(() => {
+                container.classList.remove('show');
+            }, 5000);
+        },
+
+        hide: function() {
+            const container = document.getElementById('messageContainer');
+            if (container) {
+                container.classList.remove('show');
+            }
+        }
+    };
+
     // Namespace principal para organizar o código JavaScript
     const App = {
         // Inicializa a aplicação com tratamento de erro robusto
@@ -96,7 +134,7 @@
             const passwordInput = document.getElementById('loginPassword');
 
             if (!emailInput || !passwordInput) {
-                alert('Erro nos campos do formulário.');
+                Message.show('Erro nos campos do formulário.', 'error');
                 Loading.hide();
                 return;
             }
@@ -105,12 +143,12 @@
             const password = passwordInput.value;
 
             if (!Validation.validateEmail(email)) {
-                alert('Por favor, insira um e-mail válido.');
+                Message.show('Por favor, insira um e-mail válido.', 'error');
                 Loading.hide();
                 return;
             }
             if (!Validation.validatePassword(password)) {
-                alert('A senha deve ter pelo menos 6 caracteres.');
+                Message.show('A senha deve ter pelo menos 6 caracteres.', 'error');
                 Loading.hide();
                 return;
             }
@@ -155,7 +193,7 @@
                     document.body.style.alignItems = 'stretch';
                 }
             } else {
-                alert(response.message);
+                Message.show(response.message, 'error');
             }
         },
 
@@ -170,7 +208,7 @@
             const passwordInput = document.getElementById('registerPassword');
 
             if (!usernameInput || !emailInput || !passwordInput) {
-                alert('Erro nos campos de formulário.');
+                Message.show('Erro nos campos de formulário.', 'error');
                 Loading.hide();
                 return;
             }
@@ -180,29 +218,58 @@
             const password = passwordInput.value;
 
             if (!Validation.validateUsername(username)) {
-                alert('O nome de usuário deve ter pelo menos 3 caracteres.');
+                Message.show('O nome de usuário deve ter pelo menos 3 caracteres.', 'error');
                 Loading.hide();
                 return;
             }
             if (!Validation.validateEmail(email)) {
-                alert('Por favor, insira um e-mail válido.');
+                Message.show('Por favor, insira um e-mail válido.', 'error');
                 Loading.hide();
                 return;
             }
             if (!Validation.validatePassword(password)) {
-                alert('A senha deve ter pelo menos 6 caracteres.');
+                Message.show('A senha deve ter pelo menos 6 caracteres.', 'error');
                 Loading.hide();
                 return;
             }
 
-            setTimeout(() => {
-                Loading.hide();
-                alert('Registro bem-sucedido! Por favor, faça login.');
-                const container = document.querySelector('.container');
-                if (container) {
-                    container.classList.remove('active'); // Volta para o login
+            // Chama a função do servidor GAS para registrar o usuário
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        this.handleRegisterResponse(response);
+                    })
+                    .withFailureHandler(this.handleAuthFailure)
+                    .registerUser(username, email, password);
+            } else {
+                // Simulação local caso não esteja rodando em ambiente GAS
+                console.warn('google.script.run não disponível, simulando sucesso local.');
+                setTimeout(() => {
+                    this.handleRegisterResponse({ success: true, message: 'Registro simulado!' });
+                }, 1000);
+            }
+        },
+
+        // Lida com a resposta do servidor após o registro
+        handleRegisterResponse: function(response) {
+            Loading.hide();
+            if (response.success) {
+                Message.show(response.message, 'success');
+                // Reseta o formulário de registro
+                const registerForm = document.getElementById('registerForm');
+                if (registerForm) {
+                    registerForm.reset();
                 }
-            }, 1000);
+                // Volta para a tela de login após 2 segundos
+                setTimeout(() => {
+                    const container = document.querySelector('.container');
+                    if (container) {
+                        container.classList.remove('active');
+                    }
+                }, 2000);
+            } else {
+                Message.show(response.message, 'error');
+            }
         },
 
         // Lida com o logout do sistema
@@ -235,7 +302,7 @@
         handleAuthFailure: function(error) {
             Loading.hide();
             console.error('Erro na comunicação com o servidor:', error);
-            alert('Ocorreu um erro. Por favor, tente novamente mais tarde.');
+            Message.show('Ocorreu um erro. Por favor, tente novamente mais tarde.', 'error');
         }
     };
 
