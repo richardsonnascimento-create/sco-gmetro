@@ -4,23 +4,17 @@
 
 <script>
     const Loading = {
-        overlay: document.getElementById('loadingOverlay'),
-
-        /**
-         * Exibe o overlay de carregamento.
-         */
-        show: function() {
-            if (this.overlay) {
-                this.overlay.style.display = 'flex';
+        show() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
             }
         },
 
-        /**
-         * Oculta o overlay de carregamento.
-         */
-        hide: function() {
-            if (this.overlay) {
-                this.overlay.style.display = 'none';
+        hide() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) {
+                overlay.style.display = 'none';
             }
         }
     };

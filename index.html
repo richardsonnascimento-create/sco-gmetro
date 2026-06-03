@@ -4,13 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SCO - Controle de Serviços</title>
-    <!-- Boxicons para ícones modernos -->
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
-    <!-- Injeção de estilos CSS -->
     <?!= include('styles'); ?>
 </head>
 <body>
-    <!-- Seção da Aplicação Interna (Inicialmente Oculta) -->
     <div id="appScreen" style="display: none; width: 100%;">
         <?!= include('navbar'); ?>
         <main class="app-content">
@@ -21,76 +18,76 @@
         </main>
     </div>
 
-    <!-- Container de Mensagens -->
-    <div id="messageContainer" class="message-container"></div>
+    <div id="messageContainer" class="message-container" role="alert" aria-live="polite"></div>
 
-    <!-- Seção de Login (Inicialmente Visível) -->
     <div id="loginScreen">
         <div class="container">
-            <!-- Formulário de Login -->
             <div class="form-box login">
-                <form id="loginForm">
+                <form id="loginForm" novalidate>
                     <h1>Login</h1>
                     <div class="input-box">
-                        <input type="email" id="loginEmail" placeholder="E-mail" required>
-                        <i class="bx bxs-envelope"></i>
+                        <label for="loginEmail" class="sr-only">E-mail</label>
+                        <input type="email" id="loginEmail" placeholder="E-mail" autocomplete="email" aria-describedby="loginEmailHelp" required>
+                        <i class="bx bxs-envelope" aria-hidden="true"></i>
+                        <span id="loginEmailHelp" class="sr-only">Digite seu e-mail cadastrado</span>
                     </div>
                     <div class="input-box">
-                        <input type="password" id="loginPassword" placeholder="Senha" required>
-                        <i class="bx bxs-lock"></i>
+                        <label for="loginPassword" class="sr-only">Senha</label>
+                        <input type="password" id="loginPassword" placeholder="Senha" autocomplete="current-password" required>
+                        <i class="bx bxs-lock" aria-hidden="true"></i>
                     </div>
                     <div class="forget-password">
                         <input type="checkbox" id="showLoginPassword">
                         <label for="showLoginPassword">Visualizar senha</label>
                     </div>
                     <div class="forgot-link">
-                        <a href="#">Esqueceu a senha?</a>
+                        <a href="#" id="forgotPasswordLink">Esqueceu a senha?</a>
                     </div>
-                    <button type="submit" class="btn">Login</button>
+                    <button type="submit" class="btn" id="loginSubmitBtn">Login</button>
                 </form>
             </div>
 
-            <!-- Formulário de Registro -->
             <div class="form-box register">
-                <form id="registerForm">
+                <form id="registerForm" novalidate>
                     <h1>Registrar</h1>
                     <div class="input-box">
-                        <input type="text" id="registerUser" placeholder="Nome de Usuário" required>
-                        <i class="bx bxs-user"></i>
+                        <label for="registerUser" class="sr-only">Nome de Usuário</label>
+                        <input type="text" id="registerUser" placeholder="Nome de Usuário" autocomplete="name" required>
+                        <i class="bx bxs-user" aria-hidden="true"></i>
                     </div>
                     <div class="input-box">
-                        <input type="email" id="registerEmail" placeholder="E-mail" required>
-                        <i class="bx bxs-envelope"></i>
+                        <label for="registerEmail" class="sr-only">E-mail</label>
+                        <input type="email" id="registerEmail" placeholder="E-mail" autocomplete="email" required>
+                        <i class="bx bxs-envelope" aria-hidden="true"></i>
                     </div>
                     <div class="input-box">
-                        <input type="password" id="registerPassword" placeholder="Senha" required>
-                        <i class="bx bxs-lock"></i>
+                        <label for="registerPassword" class="sr-only">Senha</label>
+                        <input type="password" id="registerPassword" placeholder="Senha" autocomplete="new-password" required>
+                        <i class="bx bxs-lock" aria-hidden="true"></i>
                     </div>
                     <div class="forget-password">
                         <input type="checkbox" id="showRegisterPassword">
                         <label for="showRegisterPassword">Visualizar senha</label>
                     </div>
-                    <button type="submit" class="btn">Registrar</button>
+                    <button type="submit" class="btn" id="registerSubmitBtn">Registrar</button>
                 </form>
             </div>
 
-            <!-- Painéis de Alternância -->
             <div class="togle-box">
                 <div class="togle-panel togle-left">
                     <h1>Seja bem-vindo!</h1>
                     <p>Não tem uma conta?</p>
-                    <button class="btn register-btn">Registrar</button>
+                    <button class="btn register-btn" type="button">Registrar</button>
                 </div>
                 <div class="togle-panel togle-right">
                     <h1>Você voltou!</h1>
                     <p>Você já tem uma conta?</p>
-                    <button class="btn login-btn">Login</button>
+                    <button class="btn login-btn" type="button">Login</button>
                 </div>
             </div>
         </div>
     </div>
     
-    <!-- Injeção de scripts JavaScript -->
     <?!= include('javascript'); ?>
     <?!= include('validacao'); ?>
     <?!= include('loading'); ?>

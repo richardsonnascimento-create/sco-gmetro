@@ -1,42 +1,28 @@
-// ID da planilha Google Sheets onde os usuários são armazenados
-const SHEETS_ID = '1h165109iAmNPcHra4AxUAiTen7c6eRrgmP6m2zc90co';
-const SHEET_NAME = 'Usuarios'; // Nome da aba na planilha
+const SHEETS_ID = PropertiesService.getScriptProperties().getProperty('SHEETS_ID') || '1h165109iAmNPcHra4AxUAiTen7c6eRrgmP6m2zc90co';
+const SHEET_NAME = 'Usuarios';
+const SALT = PropertiesService.getScriptProperties().getProperty('PASSWORD_SALT') || 'SCO_Salt_2024_v1';
+const LOCK_TIMEOUT_MS = 30000;
+const MAX_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
-/**
- * Função principal para servir a página HTML.
- * @param {Object} request O objeto de solicitação do Apps Script.
- * @returns {HtmlOutput} Um objeto HtmlOutput contendo o HTML renderizado.
- */
 function doGet(request) {
   return HtmlService.createTemplateFromFile('index').evaluate();
 }
 
-/**
- * Inclui um arquivo HTML como um parcial.
- * Esta função é usada dentro de arquivos HTML com scriptlets.
- * Ex: `<?!= include('nome_do_arquivo'); ?>`
- * @param {string} filename O nome do arquivo HTML a ser incluído (sem a extensão .html).
- * @returns {string} O conteúdo do arquivo HTML especificado.
- */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
-/**
- * Obtém a referência da planilha de usuários.
- * @returns {Sheet} A aba de usuários da planilha.
- */
 function getUsersSheet() {
   try {
     const spreadsheet = SpreadsheetApp.openById(SHEETS_ID);
     let sheet = spreadsheet.getSheetByName(SHEET_NAME);
     
-    // Se a aba não existe, cria uma nova com cabeçalhos
     if (!sheet) {
       sheet = spreadsheet.insertSheet(SHEET_NAME);
-      // Headers: Email, Username, PasswordHash, CreatedDate, Status
-      sheet.getRange(1, 1, 1, 5).setValues([['Email', 'Username', 'PasswordHash', 'CreatedDate', 'Status']]);
-      sheet.getRange(1, 1, 1, 5).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 6).setValues([['Email', 'Username', 'PasswordHash', 'CreatedDate', 'Status', 'LastLoginAttempt']]);
+      sheet.getRange(1, 1, 1, 6).setFontWeight('bold');
+      sheet.getRange(1, 1, 1, 6).setBackground('#e8e8e8');
     }
     
     return sheet;
@@ -46,13 +32,9 @@ function getUsersSheet() {
   }
 }
 
-/**
- * Gera um hash simples para a senha (usando Utilities.computeDigest).
- * @param {string} password A senha a ser processada.
- * @returns {string} O hash da senha em formato hexadecimal.
- */
 function hashPassword(password) {
-  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, password);
+  const saltedPassword = SALT + password + SALT;
+  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, saltedPassword);
   let hashString = '';
   for (let i = 0; i < digest.length; i++) {
     const byte = digest[i];
@@ -62,17 +44,12 @@ function hashPassword(password) {
   return hashString;
 }
 
-/**
- * Localiza um usuário na planilha por email.
- * @param {string} email O email do usuário.
- * @returns {Object|null} Objeto do usuário ou null se não encontrado.
- */
 function findUserByEmail(email) {
   try {
     const sheet = getUsersSheet();
     const data = sheet.getDataRange().getValues();
+    const headers = data[0];
     
-    // Pula a primeira linha (cabeçalho)
     for (let i = 1; i < data.length; i++) {
       if (data[i][0] === email) {
         return {
@@ -80,8 +57,9 @@ function findUserByEmail(email) {
           username: data[i][1],
           passwordHash: data[i][2],
           createdDate: data[i][3],
-          status: data[i][4] || 'Não', // Status do usuário (Sim/Não)
-          rowIndex: i + 1 // Para atualizar depois se necessário
+          status: data[i][4] === true || data[i][4] === 'Sim' || data[i][4] === 'sim',
+          lastLoginAttempt: data[i][5],
+          rowIndex: i + 1
         };
       }
     }
@@ -92,37 +70,66 @@ function findUserByEmail(email) {
   }
 }
 
-/**
- * Processa as credenciais de login validando contra a planilha.
- * @param {string} email O email do usuário.
- * @param {string} password A senha do usuário.
- * @returns {Object} Um objeto contendo o status da autenticação e uma mensagem.
- */
+function checkRateLimit(email) {
+  const lock = LockService.getScriptLock();
+  lock.tryLock(LOCK_TIMEOUT_MS);
+  
+  if (!lock.hasLock()) {
+    return { blocked: true, message: 'Servidor ocupado. Tente novamente em alguns segundos.' };
+  }
+  
+  try {
+    const user = findUserByEmail(email);
+    if (!user) {
+      return { blocked: false };
+    }
+    
+    const now = new Date().getTime();
+    const lastAttempt = user.lastLoginAttempt || 0;
+    
+    if (lastAttempt > 0 && (now - lastAttempt) < LOCKOUT_DURATION_MS) {
+      const lockoutEnd = new Date(lastAttempt + LOCKOUT_DURATION_MS);
+      const remainingMinutes = Math.ceil((lockoutEnd.getTime() - now) / 60000);
+      return { 
+        blocked: true, 
+        message: `Conta temporariamente bloqueada. Tente novamente em ${remainingMinutes} minutos.` 
+      };
+    }
+    
+    return { blocked: false };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
 function processLogin(email, password) {
   try {
-    // Valida email e senha
     if (!email || !password) {
       return { success: false, message: 'Email e senha são obrigatórios.' };
     }
     
-    // Procura o usuário na planilha
+    const rateCheck = checkRateLimit(email);
+    if (rateCheck.blocked) {
+      return { success: false, message: rateCheck.message };
+    }
+    
     const user = findUserByEmail(email);
     
     if (!user) {
       return { success: false, message: 'Email ou senha incorretos.' };
     }
     
-    // Verifica se o usuário está ativo
-    if (user.status !== 'Sim') {
+    if (!user.status) {
       return { success: false, message: 'Sua conta está desativada. Entre em contato com o administrador.' };
     }
     
-    // Compara o hash da senha fornecida com o hash armazenado
     const providedHash = hashPassword(password);
     if (providedHash === user.passwordHash) {
+      resetLoginAttempts(email);
       console.log('Login bem-sucedido para:', email);
       return { success: true, message: 'Login bem-sucedido!' };
     } else {
+      recordFailedLoginAttempt(email);
       return { success: false, message: 'Email ou senha incorretos.' };
     }
   } catch (error) {
@@ -131,16 +138,56 @@ function processLogin(email, password) {
   }
 }
 
-/**
- * Registra um novo usuário na planilha.
- * @param {string} username O nome de usuário.
- * @param {string} email O email do usuário.
- * @param {string} password A senha do usuário (será armazenada como hash).
- * @returns {Object} Um objeto contendo o status do registro e uma mensagem.
- */
+function recordFailedLoginAttempt(email) {
+  try {
+    const lock = LockService.getScriptLock();
+    lock.tryLock(LOCK_TIMEOUT_MS);
+    
+    if (!lock.hasLock()) return;
+    
+    const sheet = getUsersSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === email) {
+        sheet.getRange(i + 1, 6).setValue(new Date().getTime());
+        
+        const failedAttempts = sheet.getRange(i + 1, 7, 1, 1).getValue() || 0;
+        sheet.getRange(i + 1, 7).setValue(failedAttempts + 1);
+        
+        if (failedAttempts + 1 >= MAX_LOGIN_ATTEMPTS) {
+          sheet.getRange(i + 1, 5).setValue(false);
+          console.log('Usuário bloqueado por exceder tentativas:', email);
+        }
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao registrar tentativa falhada:', error);
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function resetLoginAttempts(email) {
+  try {
+    const sheet = getUsersSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    for (let i = 1; i < data.length; i++) {
+      if (data[i][0] === email) {
+        sheet.getRange(i + 1, 6).setValue(0);
+        sheet.getRange(i + 1, 7).setValue(0);
+        break;
+      }
+    }
+  } catch (error) {
+    console.error('Erro ao resetar tentativas:', error);
+  }
+}
+
 function registerUser(username, email, password) {
   try {
-    // Validações básicas
     if (!username || !email || !password) {
       return { success: false, message: 'Todos os campos são obrigatórios.' };
     }
@@ -149,8 +196,7 @@ function registerUser(username, email, password) {
       return { success: false, message: 'O nome de usuário deve ter pelo menos 3 caracteres.' };
     }
     
-    // Valida email com regex simples
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailRegex = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
     if (!emailRegex.test(email)) {
       return { success: false, message: 'Por favor, insira um e-mail válido.' };
     }
@@ -159,20 +205,17 @@ function registerUser(username, email, password) {
       return { success: false, message: 'A senha deve ter pelo menos 6 caracteres.' };
     }
     
-    // Verifica se o email já existe
     const existingUser = findUserByEmail(email);
     if (existingUser) {
       return { success: false, message: 'Este email já está registrado.' };
     }
     
-    // Hash da senha
     const passwordHash = hashPassword(password);
     const createdDate = new Date().toISOString();
-    const status = 'Não'; // Novo usuário começa como inativo
+    const status = false;
     
-    // Adiciona o novo usuário à planilha
     const sheet = getUsersSheet();
-    sheet.appendRow([email, username, passwordHash, createdDate, status]);
+    sheet.appendRow([email, username, passwordHash, createdDate, status, 0, 0]);
     
     console.log('Novo usuário registrado (aguardando ativação):', email);
     return { success: true, message: 'Registro bem-sucedido! Aguarde a ativação da sua conta pelo administrador.' };

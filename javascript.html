@@ -1,7 +1,6 @@
 <script>
-    // Namespace para gerenciar mensagens inline
     const Message = {
-        show: function(text, type = 'info') {
+        show(text, type = 'info') {
             const container = document.getElementById('messageContainer');
             if (!container) return;
 
@@ -9,49 +8,53 @@
             messageDiv.className = `message ${type}`;
             
             const icons = {
-                success: '✓',
-                error: '✕',
-                info: 'ℹ'
+                success: '<i class="bx bx-check-circle"></i>',
+                error: '<i class="bx bx-x-circle"></i>',
+                info: '<i class="bx bx-info-circle"></i>'
             };
+            
+            const sanitizedText = this.escapeHtml(text);
             
             messageDiv.innerHTML = `
                 <span class="message-icon">${icons[type] || icons.info}</span>
-                <span class="message-text">${text}</span>
+                <span class="message-text">${sanitizedText}</span>
             `;
             
             container.innerHTML = '';
             container.appendChild(messageDiv);
             container.classList.add('show');
             
-            // Auto-hide após 5 segundos
             setTimeout(() => {
                 container.classList.remove('show');
             }, 5000);
         },
 
-        hide: function() {
+        hide() {
             const container = document.getElementById('messageContainer');
             if (container) {
                 container.classList.remove('show');
             }
+        },
+
+        escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     };
 
-    // Namespace principal para organizar o código JavaScript
     const App = {
-        // Inicializa a aplicação com tratamento de erro robusto
-        init: function() {
+        init() {
             try {
                 this.bindUIActions();
                 this.initNavbarLogic();
-                console.log('App inicializado com sucesso.');
+                this.initRealTimeValidation();
             } catch (error) {
                 console.error('Erro durante a inicialização do App:', error);
             }
         },
 
-        // Gerencia os eventos da interface do usuário (Login/Registro)
-        bindUIActions: function() {
+        bindUIActions() {
             const container = document.querySelector('.container');
             const registerBtn = document.querySelector('.register-btn');
             const loginBtn = document.querySelector('.login-btn');
@@ -97,8 +100,7 @@
             }
         },
 
-        // Inicializa a lógica de navegação responsiva da Navbar
-        initNavbarLogic: function() {
+        initNavbarLogic() {
             const navToggle = document.getElementById('navToggle');
             const navMenu = document.getElementById('navMenu');
             
@@ -109,7 +111,6 @@
                 });
             }
 
-            // Dropdowns responsivos no Mobile (telas <= 768px)
             const dropdowns = document.querySelectorAll('.nav-item.dropdown > a');
             dropdowns.forEach(dropdown => {
                 dropdown.addEventListener('click', (e) => {
@@ -124,71 +125,159 @@
             });
         },
 
-        // Lida com o envio do formulário de login
-        handleLoginSubmit: function(event) {
+        initRealTimeValidation() {
+            const loginEmail = document.getElementById('loginEmail');
+            const loginPassword = document.getElementById('loginPassword');
+            const registerUser = document.getElementById('registerUser');
+            const registerEmail = document.getElementById('registerEmail');
+            const registerPassword = document.getElementById('registerPassword');
+
+            if (loginEmail) {
+                loginEmail.addEventListener('input', () => {
+                    this.clearFieldError(loginEmail);
+                    if (loginEmail.value && !Validation.validateEmail(loginEmail.value)) {
+                        this.showFieldError(loginEmail, 'Email inválido');
+                    }
+                });
+                loginEmail.addEventListener('blur', () => {
+                    if (loginEmail.value && !Validation.validateEmail(loginEmail.value)) {
+                        this.showFieldError(loginEmail, 'Email inválido');
+                    }
+                });
+            }
+
+            if (loginPassword) {
+                loginPassword.addEventListener('input', () => {
+                    this.clearFieldError(loginPassword);
+                });
+            }
+
+            if (registerUser) {
+                registerUser.addEventListener('input', () => {
+                    this.clearFieldError(registerUser);
+                    if (registerUser.value && !Validation.validateUsername(registerUser.value)) {
+                        this.showFieldError(registerUser, 'Mínimo 3 caracteres');
+                    }
+                });
+            }
+
+            if (registerEmail) {
+                registerEmail.addEventListener('input', () => {
+                    this.clearFieldError(registerEmail);
+                    if (registerEmail.value && !Validation.validateEmail(registerEmail.value)) {
+                        this.showFieldError(registerEmail, 'Email inválido');
+                    }
+                });
+                registerEmail.addEventListener('blur', () => {
+                    if (registerEmail.value && !Validation.validateEmail(registerEmail.value)) {
+                        this.showFieldError(registerEmail, 'Email inválido');
+                    }
+                });
+            }
+
+            if (registerPassword) {
+                registerPassword.addEventListener('input', () => {
+                    this.clearFieldError(registerPassword);
+                    if (registerPassword.value && !Validation.validatePassword(registerPassword.value)) {
+                        this.showFieldError(registerPassword, 'Mínimo 6 caracteres');
+                    }
+                });
+            }
+        },
+
+        showFieldError(input, message) {
+            input.classList.add('input-error');
+            let errorSpan = input.parentElement.querySelector('.field-error');
+            if (!errorSpan) {
+                errorSpan = document.createElement('span');
+                errorSpan.className = 'field-error';
+                input.parentElement.appendChild(errorSpan);
+            }
+            errorSpan.textContent = message;
+        },
+
+        clearFieldError(input) {
+            input.classList.remove('input-error');
+            const errorSpan = input.parentElement.querySelector('.field-error');
+            if (errorSpan) {
+                errorSpan.remove();
+            }
+        },
+
+        handleLoginSubmit(event) {
             event.preventDefault();
-            console.log('Tentativa de login...');
-            Loading.show();
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            this.setButtonLoading(submitBtn, true);
 
             const emailInput = document.getElementById('loginEmail');
             const passwordInput = document.getElementById('loginPassword');
 
             if (!emailInput || !passwordInput) {
                 Message.show('Erro nos campos do formulário.', 'error');
-                Loading.hide();
+                this.setButtonLoading(submitBtn, false);
                 return;
             }
 
-            const email = emailInput.value;
+            const email = emailInput.value.trim();
             const password = passwordInput.value;
 
-            if (!Validation.validateEmail(email)) {
-                Message.show('Por favor, insira um e-mail válido.', 'error');
-                Loading.hide();
-                return;
+            this.clearFieldError(emailInput);
+            this.clearFieldError(passwordInput);
+
+            let hasError = false;
+
+            if (!email) {
+                this.showFieldError(emailInput, 'Email é obrigatório');
+                hasError = true;
+            } else if (!Validation.validateEmail(email)) {
+                this.showFieldError(emailInput, 'Email inválido');
+                hasError = true;
             }
-            if (!Validation.validatePassword(password)) {
-                Message.show('A senha deve ter pelo menos 6 caracteres.', 'error');
-                Loading.hide();
+
+            if (!password) {
+                this.showFieldError(passwordInput, 'Senha é obrigatória');
+                hasError = true;
+            }
+
+            if (hasError) {
+                Message.show('Por favor, corrija os campos destacados.', 'error');
+                this.setButtonLoading(submitBtn, false);
                 return;
             }
 
-            // Chama a função do lado do servidor GAS
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((response) => {
                         this.handleLoginResponse(response, email);
+                        this.setButtonLoading(submitBtn, false);
                     })
-                    .withFailureHandler(this.handleAuthFailure)
+                    .withFailureHandler((error) => {
+                        this.handleAuthFailure(error);
+                        this.setButtonLoading(submitBtn, false);
+                    })
                     .processLogin(email, password);
             } else {
-                // Simulação local caso não esteja rodando em ambiente GAS
-                console.warn('google.script.run não disponível, simulando sucesso local.');
                 setTimeout(() => {
                     this.handleLoginResponse({ success: true, message: 'Login Simulado!' }, email);
+                    this.setButtonLoading(submitBtn, false);
                 }, 1000);
             }
         },
 
-        // Lida com a resposta do servidor após a tentativa de login
-        handleLoginResponse: function(response, email) {
+        handleLoginResponse(response, email) {
             Loading.hide();
             if (response.success) {
-                // Configura o email do usuário na navbar
                 const userDisplay = document.getElementById('userDisplayName');
                 if (userDisplay) {
                     userDisplay.textContent = email;
                 }
                 
-                // Transiciona suavemente as telas de Login para App Screen
                 const loginScreen = document.getElementById('loginScreen');
                 const appScreen = document.getElementById('appScreen');
                 
                 if (loginScreen && appScreen) {
                     loginScreen.style.display = 'none';
                     appScreen.style.display = 'block';
-                    
-                    // Altera o background do body para o estilo da aplicação
                     document.body.style.background = '#f4f6fb';
                     document.body.style.alignItems = 'stretch';
                 }
@@ -197,11 +286,10 @@
             }
         },
 
-        // Lida com o envio do formulário de registro
-        handleRegisterSubmit: function(event) {
+        handleRegisterSubmit(event) {
             event.preventDefault();
-            console.log('Tentativa de registro...');
-            Loading.show();
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            this.setButtonLoading(submitBtn, true);
 
             const usernameInput = document.getElementById('registerUser');
             const emailInput = document.getElementById('registerEmail');
@@ -209,58 +297,77 @@
 
             if (!usernameInput || !emailInput || !passwordInput) {
                 Message.show('Erro nos campos de formulário.', 'error');
-                Loading.hide();
+                this.setButtonLoading(submitBtn, false);
                 return;
             }
 
-            const username = usernameInput.value;
-            const email = emailInput.value;
+            const username = usernameInput.value.trim();
+            const email = emailInput.value.trim();
             const password = passwordInput.value;
 
-            if (!Validation.validateUsername(username)) {
-                Message.show('O nome de usuário deve ter pelo menos 3 caracteres.', 'error');
-                Loading.hide();
-                return;
+            this.clearFieldError(usernameInput);
+            this.clearFieldError(emailInput);
+            this.clearFieldError(passwordInput);
+
+            let hasError = false;
+
+            if (!username) {
+                this.showFieldError(usernameInput, 'Nome de usuário é obrigatório');
+                hasError = true;
+            } else if (!Validation.validateUsername(username)) {
+                this.showFieldError(usernameInput, 'Mínimo 3 caracteres');
+                hasError = true;
             }
-            if (!Validation.validateEmail(email)) {
-                Message.show('Por favor, insira um e-mail válido.', 'error');
-                Loading.hide();
-                return;
+
+            if (!email) {
+                this.showFieldError(emailInput, 'Email é obrigatório');
+                hasError = true;
+            } else if (!Validation.validateEmail(email)) {
+                this.showFieldError(emailInput, 'Email inválido');
+                hasError = true;
             }
-            if (!Validation.validatePassword(password)) {
-                Message.show('A senha deve ter pelo menos 6 caracteres.', 'error');
-                Loading.hide();
+
+            if (!password) {
+                this.showFieldError(passwordInput, 'Senha é obrigatória');
+                hasError = true;
+            } else if (!Validation.validatePassword(password)) {
+                this.showFieldError(passwordInput, 'Mínimo 6 caracteres');
+                hasError = true;
+            }
+
+            if (hasError) {
+                Message.show('Por favor, corrija os campos destacados.', 'error');
+                this.setButtonLoading(submitBtn, false);
                 return;
             }
 
-            // Chama a função do servidor GAS para registrar o usuário
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((response) => {
                         this.handleRegisterResponse(response);
+                        this.setButtonLoading(submitBtn, false);
                     })
-                    .withFailureHandler(this.handleAuthFailure)
+                    .withFailureHandler((error) => {
+                        this.handleAuthFailure(error);
+                        this.setButtonLoading(submitBtn, false);
+                    })
                     .registerUser(username, email, password);
             } else {
-                // Simulação local caso não esteja rodando em ambiente GAS
-                console.warn('google.script.run não disponível, simulando sucesso local.');
                 setTimeout(() => {
                     this.handleRegisterResponse({ success: true, message: 'Registro simulado!' });
+                    this.setButtonLoading(submitBtn, false);
                 }, 1000);
             }
         },
 
-        // Lida com a resposta do servidor após o registro
-        handleRegisterResponse: function(response) {
+        handleRegisterResponse(response) {
             Loading.hide();
             if (response.success) {
                 Message.show(response.message, 'success');
-                // Reseta o formulário de registro
                 const registerForm = document.getElementById('registerForm');
                 if (registerForm) {
                     registerForm.reset();
                 }
-                // Volta para a tela de login após 2 segundos
                 setTimeout(() => {
                     const container = document.querySelector('.container');
                     if (container) {
@@ -272,45 +379,54 @@
             }
         },
 
-        // Lida com o logout do sistema
-        handleLogout: function() {
+        handleLogout() {
             Loading.show();
             setTimeout(() => {
                 Loading.hide();
-                // Retorna para a tela de login
                 const loginScreen = document.getElementById('loginScreen');
                 const appScreen = document.getElementById('appScreen');
                 const loginForm = document.getElementById('loginForm');
                 
                 if (loginScreen && appScreen) {
                     appScreen.style.display = 'none';
-                    loginScreen.style.display = 'block';
+                    loginScreen.style.display = 'flex';
                     
-                    // Restaura os inputs de login
                     if (loginForm) {
                         loginForm.reset();
                     }
                     
-                    // Restaura o background do body para o gradiente original
                     document.body.style.background = 'linear-gradient(90deg, var(--secondary-color), var(--primary-color))';
+                    document.body.style.display = 'flex';
+                    document.body.style.justifyContent = 'center';
                     document.body.style.alignItems = 'center';
                 }
             }, 500);
         },
 
-        // Lida com falhas de comunicação com o servidor GAS
-        handleAuthFailure: function(error) {
+        handleAuthFailure(error) {
             Loading.hide();
             console.error('Erro na comunicação com o servidor:', error);
             Message.show('Ocorreu um erro. Por favor, tente novamente mais tarde.', 'error');
+        },
+
+        setButtonLoading(button, isLoading) {
+            if (!button) return;
+            
+            if (isLoading) {
+                button.disabled = true;
+                button.dataset.originalText = button.textContent;
+                button.textContent = 'Aguarde...';
+                button.classList.add('btn-loading');
+            } else {
+                button.disabled = false;
+                button.textContent = button.dataset.originalText || button.textContent;
+                button.classList.remove('btn-loading');
+            }
         }
     };
 
-    // Inicializa a aplicação quando o DOM estiver completamente carregado
     document.addEventListener('DOMContentLoaded', () => {
         App.init();
-        if (typeof Loading !== 'undefined') {
-            Loading.hide(); // Garante a desativação da tela de carregamento inicial
-        }
+        Loading.hide();
     });
 </script>
