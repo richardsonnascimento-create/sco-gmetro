@@ -23,3 +23,12 @@ node_modules/
 Thumbs.db
 .clasprc.json
 .clinerules
+# .gitignore
+
+# Ignorar arquivos de configuração do clasp (se você usa a CLI)
+.clasp.json
+.claspignore
+
+# Ignorar arquivos do sistema de cada sistema operacional
+.DS_Store
+Thumbs.db
