@@ -1,26 +1,64 @@
+/**
+ * Code.js
+ *
+ * Entry point do Apps Script. Concentra:
+ *   1. Configuracao (SHEETS_ID lido de PropertiesService, salt, nome da aba)
+ *   2. Helpers de acesso a dados (getUsersSheet, hashPassword, findUserByEmail)
+ *   3. Endpoints de template HTML (doGet, include)
+ *
+ * Logica de autenticacao/registro/rate-limit foi movida para AuthService.js.
+ * Logica de perfil de usuario e gerenciada em UserService.js.
+ *
+ * No Apps Script todos os arquivos .js sao convertidos para .gs no push
+ * via clasp e compartilham o mesmo escopo global, por isso as funcoes
+ * declaradas em AuthService.js e UserService.js sao acessiveis daqui
+ * (e do frontend via google.script.run) sem importacao explicita.
+ */
+
+// =================== Configuracao ===================
+
 const SHEETS_ID = PropertiesService.getScriptProperties().getProperty('SHEETS_ID');
 
-// É uma boa prática adicionar uma verificação para garantir que o ID foi encontrado.
+// Verificacao explicita para falhar cedo caso a propriedade nao esteja setada.
 if (!SHEETS_ID) {
     throw new Error(
         'Por favor, configure a propriedade do script SHEETS_ID com o ID da sua planilha.',
     );
 }
+
 const SHEET_NAME = 'Usuarios';
 const SALT =
     PropertiesService.getScriptProperties().getProperty('PASSWORD_SALT') || 'SCO_Salt_2024_v1';
-const LOCK_TIMEOUT_MS = 30000;
-const MAX_LOGIN_ATTEMPTS = 5;
-const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
-function doGet(request) {
+// =================== Entry points HTML ===================
+
+/**
+ * Renderiza o template index.html servindo a pagina requisitada.
+ * Por enquanto o parametro `page` ainda nao e usado (a modularizacao
+ * das parciais/login-registro ocorre na ETAPA 2).
+ * @param {GoogleAppsScript.Events.DoGet} e Evento de requisicao.
+ * @returns {GoogleAppsScript.HTML.HtmlOutput}
+ */
+function doGet(e) {
     return HtmlService.createTemplateFromFile('index').evaluate();
 }
 
+/**
+ * Utilitario usado pelos templates HTML para incluir o conteudo bruto
+ * de um arquivo como parcial.
+ * @param {string} filename Nome do arquivo (sem extensao).
+ * @returns {string} Conteudo HTML do arquivo.
+ */
 function include(filename) {
     return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
+// =================== Helpers de acesso a dados ===================
+
+/**
+ * Obtem (e cria, se necessario) a aba de usuarios na planilha configurada.
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
+ */
 function getUsersSheet() {
     try {
         const spreadsheet = SpreadsheetApp.openById(SHEETS_ID);
@@ -46,55 +84,17 @@ function getUsersSheet() {
 
         return sheet;
     } catch (error) {
-        console.error('Erro ao acessar a planilha de usuários:', error);
-        throw new Error('Erro ao acessar o banco de dados de usuários.');
+        console.error('Erro ao acessar a planilha de usuarios:', error);
+        throw new Error('Erro ao acessar o banco de dados de usuarios.');
     }
 }
 
+/**
+ * Gera hash SHA-256 de uma senha concatenada com o SALT.
+ * @param {string} password Senha em texto puro.
+ * @returns {string} Hash hexadecimal.
+ */
 function hashPassword(password) {
-    const saltedPassword = SALT + password + SALT;
-    const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, saltedPassword);
-    let hashString = '';
-    for (let i = 0; i < digest.length; i++) {
-        const byte = digest[i];
-        const byteStr = (byte < 0 ? 256 + byte : byte).toString(16);
-        hashString += ('0' + byteStr).slice(-2);
-    }
-    return hashString;
-}
-
-function findUserByEmail(email) {
-    try {
-        const sheet = getUsersSheet();
-        const data = sheet.getDataRange().getValues();
-        const headers = data[0];
-
-        for (let i = 1; i < data.length; i++) {
-            if (data[i][0] === email) {
-                return {
-                    email: data[i][0],
-                    username: data[i][1],
-                    passwordHash: data[i][2],
-                    createdDate: data[i][3],
-                    status: data[i][4] === true || data[i][4] === 'Sim' || data[i][4] === 'sim',
-                    lastLoginAttempt: data[i][5],
-                    rowIndex: i + 1,
-                };
-            }
-        }
-        return null;
-    } catch (error) {
-        console.error('Erro ao procurar usuário:', error);
-        return null;
-    }
-}
-
-function checkRateLimit(email) {
-    const lock = LockService.getScriptLock();
-    lock.tryLock(LOCK_TIMEOUT_MS);
-
-    if (!lock.hasLock()) {
-        return { blocked: true, message: 'Servidor ocupado. Tente novamente em alguns segundos.' };
     }
 
     try {
