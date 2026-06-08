@@ -1,56 +1,11 @@
 <script>
-    const Message = {
-        show(text, type = 'info') {
-            const container = document.getElementById('messageContainer');
-            if (!container) return;
-
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            
-            const icons = {
-                success: '<i class="bx bx-check-circle"></i>',
-                error: '<i class="bx bx-x-circle"></i>',
-                info: '<i class="bx bx-info-circle"></i>'
-            };
-            
-            const sanitizedText = this.escapeHtml(text);
-            
-            messageDiv.innerHTML = `
-                <span class="message-icon">${icons[type] || icons.info}</span>
-                <span class="message-text">${sanitizedText}</span>
-            `;
-            
-            container.innerHTML = '';
-            container.appendChild(messageDiv);
-            container.classList.add('show');
-            
-            setTimeout(() => {
-                container.classList.remove('show');
-            }, 5000);
-        },
-
-        hide() {
-            const container = document.getElementById('messageContainer');
-            if (container) {
-                container.classList.remove('show');
-            }
-        },
-
-        escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-    };
-
-    const App = {
+    const Auth = {
         init() {
             try {
                 this.bindUIActions();
-                this.initNavbarLogic();
                 this.initRealTimeValidation();
             } catch (error) {
-                console.error('Erro durante a inicialização do App:', error);
+                console.error('Erro durante a inicializacao do Auth:', error);
             }
         },
 
@@ -62,7 +17,6 @@
             const registerForm = document.getElementById('registerForm');
             const showLoginPassword = document.getElementById('showLoginPassword');
             const showRegisterPassword = document.getElementById('showRegisterPassword');
-            const logoutBtn = document.getElementById('logoutBtn');
 
             if (registerBtn && container) {
                 registerBtn.addEventListener('click', () => {
@@ -94,35 +48,6 @@
                     Validation.togglePasswordVisibility('registerPassword', event.target.checked);
                 });
             }
-
-            if (logoutBtn) {
-                logoutBtn.addEventListener('click', this.handleLogout.bind(this));
-            }
-        },
-
-        initNavbarLogic() {
-            const navToggle = document.getElementById('navToggle');
-            const navMenu = document.getElementById('navMenu');
-            
-            if (navToggle && navMenu) {
-                navToggle.addEventListener('click', () => {
-                    navMenu.classList.toggle('show');
-                    navToggle.classList.toggle('active');
-                });
-            }
-
-            const dropdowns = document.querySelectorAll('.nav-item.dropdown > a');
-            dropdowns.forEach(dropdown => {
-                dropdown.addEventListener('click', (e) => {
-                    if (window.innerWidth <= 768) {
-                        e.preventDefault();
-                        const parent = dropdown.parentElement;
-                        if (parent) {
-                            parent.classList.toggle('open');
-                        }
-                    }
-                });
-            });
         },
 
         initRealTimeValidation() {
@@ -136,12 +61,12 @@
                 loginEmail.addEventListener('input', () => {
                     this.clearFieldError(loginEmail);
                     if (loginEmail.value && !Validation.validateEmail(loginEmail.value)) {
-                        this.showFieldError(loginEmail, 'Email inválido');
+                        this.showFieldError(loginEmail, 'Email invalido');
                     }
                 });
                 loginEmail.addEventListener('blur', () => {
                     if (loginEmail.value && !Validation.validateEmail(loginEmail.value)) {
-                        this.showFieldError(loginEmail, 'Email inválido');
+                        this.showFieldError(loginEmail, 'Email invalido');
                     }
                 });
             }
@@ -156,7 +81,7 @@
                 registerUser.addEventListener('input', () => {
                     this.clearFieldError(registerUser);
                     if (registerUser.value && !Validation.validateUsername(registerUser.value)) {
-                        this.showFieldError(registerUser, 'Mínimo 3 caracteres');
+                        this.showFieldError(registerUser, 'Minimo 3 caracteres');
                     }
                 });
             }
@@ -165,12 +90,12 @@
                 registerEmail.addEventListener('input', () => {
                     this.clearFieldError(registerEmail);
                     if (registerEmail.value && !Validation.validateEmail(registerEmail.value)) {
-                        this.showFieldError(registerEmail, 'Email inválido');
+                        this.showFieldError(registerEmail, 'Email invalido');
                     }
                 });
                 registerEmail.addEventListener('blur', () => {
                     if (registerEmail.value && !Validation.validateEmail(registerEmail.value)) {
-                        this.showFieldError(registerEmail, 'Email inválido');
+                        this.showFieldError(registerEmail, 'Email invalido');
                     }
                 });
             }
@@ -179,7 +104,7 @@
                 registerPassword.addEventListener('input', () => {
                     this.clearFieldError(registerPassword);
                     if (registerPassword.value && !Validation.validatePassword(registerPassword.value)) {
-                        this.showFieldError(registerPassword, 'Mínimo 6 caracteres');
+                        this.showFieldError(registerPassword, 'Minimo 6 caracteres');
                     }
                 });
             }
@@ -213,7 +138,7 @@
             const passwordInput = document.getElementById('loginPassword');
 
             if (!emailInput || !passwordInput) {
-                Message.show('Erro nos campos do formulário.', 'error');
+                Message.show('Erro nos campos do formulario.', 'error');
                 this.setButtonLoading(submitBtn, false);
                 return;
             }
@@ -227,15 +152,15 @@
             let hasError = false;
 
             if (!email) {
-                this.showFieldError(emailInput, 'Email é obrigatório');
+                this.showFieldError(emailInput, 'Email e obrigatorio');
                 hasError = true;
             } else if (!Validation.validateEmail(email)) {
-                this.showFieldError(emailInput, 'Email inválido');
+                this.showFieldError(emailInput, 'Email invalido');
                 hasError = true;
             }
 
             if (!password) {
-                this.showFieldError(passwordInput, 'Senha é obrigatória');
+                this.showFieldError(passwordInput, 'Senha e obrigatoria');
                 hasError = true;
             }
 
@@ -248,39 +173,27 @@
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((response) => {
-                        this.handleLoginResponse(response, email);
+                        this.handleLoginResponse(response);
                         this.setButtonLoading(submitBtn, false);
                     })
                     .withFailureHandler((error) => {
                         this.handleAuthFailure(error);
                         this.setButtonLoading(submitBtn, false);
                     })
-                    .processLogin(email, password);
+                    .loginUser(email, password);
             } else {
                 setTimeout(() => {
-                    this.handleLoginResponse({ success: true, message: 'Login Simulado!' }, email);
+                    this.handleLoginResponse({ success: true, message: 'Login Simulado!', token: 'fake-token' });
                     this.setButtonLoading(submitBtn, false);
                 }, 1000);
             }
         },
 
-        handleLoginResponse(response, email) {
+        handleLoginResponse(response) {
             Loading.hide();
-            if (response.success) {
-                const userDisplay = document.getElementById('userDisplayName');
-                if (userDisplay) {
-                    userDisplay.textContent = email;
-                }
-                
-                const loginScreen = document.getElementById('loginScreen');
-                const appScreen = document.getElementById('appScreen');
-                
-                if (loginScreen && appScreen) {
-                    loginScreen.style.display = 'none';
-                    appScreen.style.display = 'block';
-                    document.body.style.background = '#f4f6fb';
-                    document.body.style.alignItems = 'stretch';
-                }
+            if (response.success && response.token) {
+                sessionStorage.setItem('sco_token', response.token);
+                window.location.href = '?token=' + response.token;
             } else {
                 Message.show(response.message, 'error');
             }
@@ -296,7 +209,7 @@
             const passwordInput = document.getElementById('registerPassword');
 
             if (!usernameInput || !emailInput || !passwordInput) {
-                Message.show('Erro nos campos de formulário.', 'error');
+                Message.show('Erro nos campos de formulario.', 'error');
                 this.setButtonLoading(submitBtn, false);
                 return;
             }
@@ -312,26 +225,26 @@
             let hasError = false;
 
             if (!username) {
-                this.showFieldError(usernameInput, 'Nome de usuário é obrigatório');
+                this.showFieldError(usernameInput, 'Nome de usuario e obrigatorio');
                 hasError = true;
             } else if (!Validation.validateUsername(username)) {
-                this.showFieldError(usernameInput, 'Mínimo 3 caracteres');
+                this.showFieldError(usernameInput, 'Minimo 3 caracteres');
                 hasError = true;
             }
 
             if (!email) {
-                this.showFieldError(emailInput, 'Email é obrigatório');
+                this.showFieldError(emailInput, 'Email e obrigatorio');
                 hasError = true;
             } else if (!Validation.validateEmail(email)) {
-                this.showFieldError(emailInput, 'Email inválido');
+                this.showFieldError(emailInput, 'Email invalido');
                 hasError = true;
             }
 
             if (!password) {
-                this.showFieldError(passwordInput, 'Senha é obrigatória');
+                this.showFieldError(passwordInput, 'Senha e obrigatoria');
                 hasError = true;
             } else if (!Validation.validatePassword(password)) {
-                this.showFieldError(passwordInput, 'Mínimo 6 caracteres');
+                this.showFieldError(passwordInput, 'Minimo 6 caracteres');
                 hasError = true;
             }
 
@@ -351,7 +264,7 @@
                         this.handleAuthFailure(error);
                         this.setButtonLoading(submitBtn, false);
                     })
-                    .registerUser(username, email, password);
+                    .registerNewUser(username, email, password);
             } else {
                 setTimeout(() => {
                     this.handleRegisterResponse({ success: true, message: 'Registro simulado!' });
@@ -379,33 +292,9 @@
             }
         },
 
-        handleLogout() {
-            Loading.show();
-            setTimeout(() => {
-                Loading.hide();
-                const loginScreen = document.getElementById('loginScreen');
-                const appScreen = document.getElementById('appScreen');
-                const loginForm = document.getElementById('loginForm');
-                
-                if (loginScreen && appScreen) {
-                    appScreen.style.display = 'none';
-                    loginScreen.style.display = 'flex';
-                    
-                    if (loginForm) {
-                        loginForm.reset();
-                    }
-                    
-                    document.body.style.background = 'linear-gradient(90deg, var(--secondary-color), var(--primary-color))';
-                    document.body.style.display = 'flex';
-                    document.body.style.justifyContent = 'center';
-                    document.body.style.alignItems = 'center';
-                }
-            }, 500);
-        },
-
         handleAuthFailure(error) {
             Loading.hide();
-            console.error('Erro na comunicação com o servidor:', error);
+            console.error('Erro na comunicacao com o servidor:', error);
             Message.show('Ocorreu um erro. Por favor, tente novamente mais tarde.', 'error');
         },
 
@@ -426,7 +315,7 @@
     };
 
     document.addEventListener('DOMContentLoaded', () => {
-        App.init();
+        Auth.init();
         Loading.hide();
     });
 </script>

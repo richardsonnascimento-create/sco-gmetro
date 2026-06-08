@@ -3,21 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCO - Controle de Serviços</title>
+    <title>SCO - Login</title>
     <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
     <?!= include('styles'); ?>
 </head>
 <body>
-    <div id="appScreen" style="display: none; width: 100%;">
-        <?!= include('navbar'); ?>
-        <main class="app-content">
-            <div class="welcome-card">
-                <h2>Seja bem-vindo ao SCO!</h2>
-                <p>Use o menu superior para navegar entre os cadastros e consultas do sistema de gerenciamento.</p>
-            </div>
-        </main>
-    </div>
-
     <div id="messageContainer" class="message-container" role="alert" aria-live="polite"></div>
 
     <div id="loginScreen">
@@ -87,9 +77,10 @@
             </div>
         </div>
     </div>
-    
-    <?!= include('javascript'); ?>
+
     <?!= include('validacao'); ?>
+    <?!= include('js_utils'); ?>
     <?!= include('loading'); ?>
+    <?!= include('js_auth'); ?>
 </body>
 </html>

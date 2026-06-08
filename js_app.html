@@ -1,0 +1,121 @@
+<script>
+    const App = {
+        init() {
+            try {
+                console.log('[App.init] iniciando...');
+                const token = this.getToken();
+                console.log('[App.init] token:', token ? 'encontrado' : 'ausente');
+                if (!token) {
+                    console.log('[App.init] sem token, redirecionando para login');
+                    this.redirectToLogin();
+                    return;
+                }
+                this.validateAndShowApp(token);
+                this.initNavbarLogic();
+                this.bindLogout(token);
+            } catch (error) {
+                console.error('[App.init] Erro:', error);
+            }
+        },
+
+        getToken() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const urlToken = urlParams.get('token');
+            const sessionToken = sessionStorage.getItem('sco_token');
+            console.log('[getToken] URL token:', urlToken ? urlToken.substring(0, 8) + '...' : 'null');
+            console.log('[getToken] sessionStorage token:', sessionToken ? sessionToken.substring(0, 8) + '...' : 'null');
+
+            if (urlToken && !sessionToken) {
+                sessionStorage.setItem('sco_token', urlToken);
+                const cleanUrl = window.location.pathname;
+                window.history.replaceState({}, document.title, cleanUrl);
+                console.log('[getToken] token salvo no sessionStorage e URL limpa');
+                return urlToken;
+            }
+
+            return sessionToken || urlToken;
+        },
+
+        redirectToLogin() {
+            window.location.href = window.location.pathname;
+        },
+
+        validateAndShowApp(token) {
+            console.log('[validateAndShowApp] validando token...');
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        console.log('[validateAndShowApp] resposta:', JSON.stringify(response));
+                        if (response.valid) {
+                            const userDisplay = document.getElementById('userDisplayName');
+                            if (userDisplay) {
+                                userDisplay.textContent = response.email;
+                            }
+                        } else {
+                            sessionStorage.removeItem('sco_token');
+                            this.redirectToLogin();
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('[validateAndShowApp] erro:', error);
+                        this.redirectToLogin();
+                    })
+                    .checkSession(token);
+            }
+        },
+
+        initNavbarLogic() {
+            const navToggle = document.getElementById('navToggle');
+            const navMenu = document.getElementById('navMenu');
+            
+            if (navToggle && navMenu) {
+                navToggle.addEventListener('click', () => {
+                    navMenu.classList.toggle('show');
+                    navToggle.classList.toggle('active');
+                });
+            }
+
+            const dropdowns = document.querySelectorAll('.nav-item.dropdown > a');
+            dropdowns.forEach(dropdown => {
+                dropdown.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 768) {
+                        e.preventDefault();
+                        const parent = dropdown.parentElement;
+                        if (parent) {
+                            parent.classList.toggle('open');
+                        }
+                    }
+                });
+            });
+        },
+
+        bindLogout(token) {
+            const logoutBtn = document.getElementById('logoutBtn');
+            if (logoutBtn) {
+                logoutBtn.addEventListener('click', () => {
+                    Loading.show();
+                    if (typeof google !== 'undefined' && google.script && google.script.run) {
+                        google.script.run
+                            .withSuccessHandler(() => {
+                                sessionStorage.removeItem('sco_token');
+                                window.location.href = window.location.pathname;
+                            })
+                            .withFailureHandler(() => {
+                                sessionStorage.removeItem('sco_token');
+                                window.location.href = window.location.pathname;
+                            })
+                            .logoutUser(token);
+                    } else {
+                        sessionStorage.removeItem('sco_token');
+                        window.location.href = window.location.pathname;
+                    }
+                });
+            }
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+        App.init();
+        Loading.hide();
+    });
+</script>
