@@ -125,6 +125,7 @@
                             if (userDisplay) {
                                 userDisplay.textContent = response.email;
                             }
+                            this.checkAdminStatus(token);
                         } else {
                             sessionStorage.removeItem('sco_token');
                             this.showLogin();
@@ -143,26 +144,82 @@
             }
         },
 
+        checkAdminStatus(token) {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        if (response.isAdmin) {
+                            const adminItem = document.getElementById('navAdminItem');
+                            if (adminItem) {
+                                adminItem.style.display = 'block';
+                            }
+                            const adminLink = document.getElementById('adminLink');
+                            if (adminLink) {
+                                adminLink.addEventListener('click', (e) => {
+                                    e.preventDefault();
+                                    this.toggleAdmin(token);
+                                });
+                            }
+                        }
+                    })
+                    .withFailureHandler(() => {})
+                    .isAdmin(token);
+            }
+        },
+
+        toggleAdmin(token) {
+            const adminScreen = document.getElementById('adminScreen');
+            const appContent = document.querySelector('.app-content');
+            if (!adminScreen) return;
+
+            if (adminScreen.style.display === 'none') {
+                Admin.init(token);
+            } else {
+                adminScreen.style.display = 'none';
+                if (appContent) appContent.style.display = 'block';
+            }
+        },
+
         initNavbarLogic() {
             const navToggle = document.getElementById('navToggle');
             const navMenu = document.getElementById('navMenu');
             
             if (navToggle && navMenu) {
-                navToggle.addEventListener('click', () => {
+                navToggle.addEventListener('click', (e) => {
+                    e.stopPropagation();
                     navMenu.classList.toggle('show');
                     navToggle.classList.toggle('active');
                 });
             }
 
+            // Fecha menu ao clicar fora
+            document.addEventListener('click', (e) => {
+                if (!navMenu || !navToggle) return;
+                const isClickInside = navMenu.contains(e.target) || navToggle.contains(e.target);
+                if (!isClickInside && navMenu.classList.contains('show')) {
+                    navMenu.classList.remove('show');
+                    navToggle.classList.remove('active');
+                }
+            });
+
+            // Dropdowns: toggle via clique em qualquer tamanho de tela
             const dropdowns = document.querySelectorAll('.nav-item.dropdown > a');
             dropdowns.forEach(dropdown => {
                 dropdown.addEventListener('click', (e) => {
-                    if (window.innerWidth <= 768) {
+                    const parent = dropdown.parentElement;
+                    if (!parent) return;
+
+                    // Em telas > 1024px, dropdown abre via hover — não interfere
+                    // Em telas <= 1024px, toggle manual
+                    if (window.innerWidth <= 1024) {
                         e.preventDefault();
-                        const parent = dropdown.parentElement;
-                        if (parent) {
-                            parent.classList.toggle('open');
-                        }
+                        // Fecha outros dropdowns abertos
+                        document.querySelectorAll('.nav-item.dropdown.open').forEach((openItem) => {
+                            if (openItem !== parent) {
+                                openItem.classList.remove('open');
+                            }
+                        });
+                        parent.classList.toggle('open');
                     }
                 });
             });

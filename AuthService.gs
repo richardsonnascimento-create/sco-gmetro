@@ -95,8 +95,9 @@ function resetLoginAttempts(email) {
 
 /**
  * Processa autenticação: valida credenciais, checa bloqueio, verifica hash, cria sessão.
- * Fluxo: valida inputs → checa lockout → busca usuário → verifica status → compara hash →
+ * Fluxo: valida inputs → checa lockout → busca usuário → verifica status string → compara hash →
  *   sucesso: reseta tentativas + cria sessão (token) | falha: registra tentativa.
+ * Status possíveis: "pendente" (aguarda admin), "aprovado" (liberado), "rejeitado" (bloqueado).
  * @param {string} email Email do usuário
  * @param {string} password Senha em texto puro
  * @returns {Object} {success: boolean, message: string, token?: string}
@@ -118,10 +119,17 @@ function processLogin(email, password) {
             return { success: false, message: 'Email ou senha incorretos.' };
         }
 
-        if (!user.status) {
+        if (user.status === 'pendente') {
             return {
                 success: false,
-                message: 'Sua conta esta desativada. Entre em contato com o administrador.',
+                message: 'Aguardando aprovacao do administrador.',
+            };
+        }
+
+        if (user.status === 'rejeitado') {
+            return {
+                success: false,
+                message: 'Conta bloqueada. Entre em contato com o administrador.',
             };
         }
 

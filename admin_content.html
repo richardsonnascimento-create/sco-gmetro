@@ -1,0 +1,182 @@
+<div id="adminScreen" style="display: none;">
+    <main class="app-content">
+        <div class="admin-container">
+            <h2>Administração de Usuários</h2>
+            <p class="admin-subtitle">Aprove, rejeite ou modifique os módulos de acesso de cada usuário.</p>
+            <div id="adminContent">
+                <div class="admin-empty">Carregando usuários...</div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const Admin = {
+        MODULOS_DISPONIVEIS: [
+            'Cadastro de Proprietário',
+            'Login',
+            'Serviços',
+        ],
+
+        token: null,
+
+        init(token) {
+            this.token = token;
+            this.showScreen();
+            this.loadUsers();
+        },
+
+        showScreen() {
+            const adminScreen = document.getElementById('adminScreen');
+            const appContent = document.querySelector('.app-content');
+            if (adminScreen) adminScreen.style.display = 'block';
+            if (appContent) appContent.style.display = 'none';
+        },
+
+        hideScreen() {
+            const adminScreen = document.getElementById('adminScreen');
+            const appContent = document.querySelector('.app-content');
+            if (adminScreen) adminScreen.style.display = 'none';
+            if (appContent) appContent.style.display = 'block';
+        },
+
+        loadUsers() {
+            const container = document.getElementById('adminContent');
+            if (!container) return;
+            container.innerHTML = '<div class="admin-empty">Carregando usuários...</div>';
+            Loading.show();
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((users) => {
+                        Loading.hide();
+                        if (users.error) {
+                            Message.show(users.error, 'error');
+                            return;
+                        }
+                        this.renderTable(users);
+                    })
+                    .withFailureHandler((error) => {
+                        Loading.hide();
+                        console.error('[Admin] Erro:', error);
+                        Message.show('Erro ao carregar usuários.', 'error');
+                    })
+                    .getUsers(this.token);
+            }
+        },
+
+        renderTable(users) {
+            const container = document.getElementById('adminContent');
+            if (!container) return;
+
+            if (!users || users.length === 0) {
+                container.innerHTML = '<div class="admin-empty">Nenhum usuário encontrado.</div>';
+                return;
+            }
+
+            var html = '';
+            html += '<table class="admin-table" role="table">';
+            html += '<thead><tr>';
+            html += '<th>Usuário</th><th>Email</th><th>Status</th><th>Módulos</th><th>Ação</th>';
+            html += '</tr></thead><tbody>';
+
+            for (var i = 0; i < users.length; i++) {
+                var u = users[i];
+                var modulosArray = u.modulos ? u.modulos.split(',').filter(function (m) { return m.trim(); }) : [];
+
+                html += '<tr id="row-' + i + '">';
+
+                // Username
+                html += '<td data-label="Usuário" class="username-cell">' + this._esc(u.username || '-') + '</td>';
+
+                // Email
+                html += '<td data-label="Email" class="email-cell">';
+                html += this._esc(u.email);
+                html += '<input type="hidden" class="user-email" value="' + this._esc(u.email) + '">';
+                html += '</td>';
+
+                // Status select
+                html += '<td data-label="Status">';
+                html += '<select class="status-select" aria-label="Status">';
+                var statuses = ['pendente', 'aprovado', 'rejeitado'];
+                for (var s = 0; s < statuses.length; s++) {
+                    var sel = statuses[s] === u.status ? ' selected' : '';
+                    html += '<option value="' + statuses[s] + '"' + sel + '>' + statuses[s].charAt(0).toUpperCase() + statuses[s].slice(1) + '</option>';
+                }
+                html += '</select>';
+                html += '</td>';
+
+                // Modulos checkboxes
+                html += '<td data-label="Módulos"><div class="modulos-grid">';
+                for (var m = 0; m < this.MODULOS_DISPONIVEIS.length; m++) {
+                    var modName = this.MODULOS_DISPONIVEIS[m];
+                    var checked = modulosArray.indexOf(modName) !== -1 ? ' checked' : '';
+                    var cbId = 'mod-' + i + '-' + m;
+                    html += '<label for="' + cbId + '">';
+                    html += '<input type="checkbox" id="' + cbId + '" class="mod-checkbox" value="' + this._esc(modName) + '"' + checked + '>';
+                    html += this._esc(modName);
+                    html += '</label>';
+                }
+                html += '</div></td>';
+
+                // Save button
+                html += '<td data-label="Ação">';
+                html += '<button class="btn-save-row" data-row="' + i + '">Salvar</button>';
+                html += '</td>';
+
+                html += '</tr>';
+            }
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+
+            // Bind save buttons
+            var buttons = container.querySelectorAll('.btn-save-row');
+            for (var b = 0; b < buttons.length; b++) {
+                buttons[b].addEventListener('click', this._onSaveRow.bind(this));
+            }
+        },
+
+        _onSaveRow(event) {
+            var btn = event.currentTarget;
+            btn.disabled = true;
+            btn.textContent = 'Salvando...';
+
+            var row = btn.closest('tr');
+            var email = row.querySelector('.user-email').value;
+            var status = row.querySelector('.status-select').value;
+            var checkboxes = row.querySelectorAll('.mod-checkbox:checked');
+            var modulos = [];
+            for (var i = 0; i < checkboxes.length; i++) {
+                modulos.push(checkboxes[i].value);
+            }
+            var modulosStr = modulos.join(',');
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        btn.disabled = false;
+                        btn.textContent = 'Salvar';
+                        if (response.success) {
+                            Message.show(response.message, 'success');
+                        } else {
+                            Message.show(response.message, 'error');
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        btn.disabled = false;
+                        btn.textContent = 'Salvar';
+                        console.error('[Admin] Erro ao salvar:', error);
+                        Message.show('Erro ao salvar. Tente novamente.', 'error');
+                    })
+                    .updateUser(this.token, email, status, modulosStr);
+            }
+        },
+
+        _esc(text) {
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+    };
+</script>

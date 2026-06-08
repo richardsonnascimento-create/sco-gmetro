@@ -1,31 +1,23 @@
 /**
- * Entry point do Web App: roteia para login.html ou app.html baseado na validade do token.
- * Logs de diagnóstico ajudam rastrear fluxo de autenticação no Cloud Logging.
+ * Entry point do Web App: roteia conforme token.
+ *   ?token=xxx → app.html (se token válido)
+ *   sem token  → login.html
+ * A tela de admin é carregada na mesma página via google.script.run (sem redirecionamento).
  * @param {Object} e Evento doGet (contém e.parameter.token)
  * @returns {GoogleAppsScript.HTML.HtmlOutput} Template renderizado
  */
 function doGet(e) {
     var token = e && e.parameter && e.parameter.token;
-    console.log('[doGet] token param:', token ? token.substring(0, 8) + '...' : 'null');
+    console.log('[doGet] token:', token ? token.substring(0, 8) + '...' : 'null');
 
     if (token) {
         var email = validateSession(token);
         console.log('[doGet] validateSession returned email:', email || 'null');
+
         if (email) {
             return HtmlService.createTemplateFromFile('app').evaluate();
-        } else {
-            // Token inválido ou expirado, limpar o token da URL e redirecionar para login.
-            // Isso evita que o token inválido persista na URL.
-            return HtmlService.createTemplateFromFile('login').evaluate();
         }
     }
-
-    // Tenta obter o token do sessionStorage para evitar redirecionamento excessivo.
-    // Note: Isso só funciona se o token já estiver sido salvo no cliente e a página for recarregada sem o token na URL.
-    // Em um ambiente de Web App do Apps Script, a comunicação entre o cliente e o servidor é mais controlada.
-    // O `doGet` é executado no servidor. O cliente deve lidar com a presença/ausência do token.
-    // Este bloco pode ser redundante ou até problemático dependendo do fluxo exato de deploy.
-    // Por enquanto, vamos manter a lógica baseada apenas no parâmetro da URL para consistência com GAS.
 
     return HtmlService.createTemplateFromFile('login').evaluate();
 }
@@ -87,4 +79,84 @@ function checkSession(token) {
         return { valid: true, email: email };
     }
     return { valid: false };
+}
+
+/**
+ * Retorna o email do usuário logado a partir do token.
+ * Exposto via google.script.run.getCurrentUser(token).
+ * @param {string} token UUID da sessão
+ * @returns {Object} {email: string} ou {error: string}
+ */
+function getCurrentUser(token) {
+    var email = validateSession(token);
+    if (email) {
+        return { email: email };
+    }
+    return { error: 'Sessao invalida ou expirada.' };
+}
+
+/**
+ * Verifica se o usuário do token é administrador.
+ * Exposto via google.script.run.isAdmin(token).
+ * @param {string} token UUID da sessão
+ * @returns {Object} {isAdmin: boolean, email?: string}
+ */
+function isAdmin(token) {
+    var email = validateSession(token);
+    if (!email) {
+        return { isAdmin: false };
+    }
+    var user = findUserByEmail(email);
+    return {
+        isAdmin: !!(user && user.isAdmin),
+        email: email,
+    };
+}
+
+/**
+ * Retorna todos os usuários (apenas admin).
+ * Valida token e permissão de admin antes de chamar SheetService.
+ * Exposto via google.script.run.getUsers(token).
+ * @param {string} token UUID da sessão
+ * @returns {Array|Object} Array de usuários ou {error: string}
+ */
+function getUsers(token) {
+    var email = validateSession(token);
+    if (!email) {
+        return { error: 'Sessao invalida.' };
+    }
+    var user = findUserByEmail(email);
+    if (!user || !user.isAdmin) {
+        return { error: 'Acesso negado. Apenas administradores podem listar usuarios.' };
+    }
+    return getAllUsers();
+}
+
+/**
+ * Atualiza status e módulos de um usuário (apenas admin).
+ * Valida token e permissão de admin antes de chamar SheetService.
+ * Exposto via google.script.run.updateUser(token, email, status, modulos).
+ * @param {string} token UUID da sessão do admin
+ * @param {string} targetEmail Email do usuário a atualizar
+ * @param {string} status Novo status ("pendente", "aprovado", "rejeitado")
+ * @param {string} modulos Módulos separados por vírgula
+ * @returns {Object} {success: boolean, message: string}
+ */
+function updateUser(token, targetEmail, status, modulos) {
+    var email = validateSession(token);
+    if (!email) {
+        return { success: false, message: 'Sessao invalida.' };
+    }
+    var user = findUserByEmail(email);
+    if (!user || !user.isAdmin) {
+        return { success: false, message: 'Acesso negado. Apenas administradores.' };
+    }
+    if (!targetEmail) {
+        return { success: false, message: 'Email do usuario nao informado.' };
+    }
+    var updated = updateUserFields(targetEmail, status, modulos);
+    if (updated) {
+        return { success: true, message: 'Usuario atualizado com sucesso.' };
+    }
+    return { success: false, message: 'Usuario nao encontrado.' };
 }
