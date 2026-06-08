@@ -160,3 +160,93 @@ function updateUser(token, targetEmail, status, modulos) {
     }
     return { success: false, message: 'Usuario nao encontrado.' };
 }
+
+/**
+ * Endpoint: insere novo proprietário (requer sessão válida).
+ * Exposto via google.script.run.inserirProprietarioEndpoint(token, dados).
+ * @param {string} token UUID da sessão
+ * @param {Object} dados Dados do proprietário (exceto id)
+ * @returns {Object} {success: boolean, message: string, id?: number}
+ */
+function inserirProprietarioEndpoint(token, dados) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    try {
+        var id = inserirProprietario(dados);
+        return { success: true, message: 'Proprietario cadastrado com sucesso.', id: id };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Endpoint: atualiza proprietário existente (requer sessão válida).
+ * Exposto via google.script.run.atualizarProprietarioEndpoint(token, id, dados).
+ * @param {string} token UUID da sessão
+ * @param {number} id ID do proprietário
+ * @param {Object} dados Novos dados
+ * @returns {Object} {success: boolean, message: string}
+ */
+function atualizarProprietarioEndpoint(token, id, dados) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    try {
+        atualizarProprietario(id, dados);
+        return { success: true, message: 'Proprietario atualizado com sucesso.' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Endpoint: exclui proprietário (requer sessão válida).
+ * Exposto via google.script.run.excluirProprietarioEndpoint(token, id).
+ * @param {string} token UUID da sessão
+ * @param {number} id ID do proprietário
+ * @returns {Object} {success: boolean, message: string}
+ */
+function excluirProprietarioEndpoint(token, id) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    try {
+        excluirProprietario(id);
+        return { success: true, message: 'Proprietario excluido com sucesso.' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Endpoint: lista todos os proprietários (requer sessão válida).
+ * Exposto via google.script.run.listarProprietariosEndpoint(token).
+ * @param {string} token UUID da sessão
+ * @returns {Array|Object} Array de proprietários ou {error: string}
+ */
+function listarProprietariosEndpoint(token) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    try {
+        return listarProprietarios();
+    } catch (error) {
+        return { error: error.message };
+    }
+}
+
+/**
+ * Endpoint: busca proprietário por ID (requer sessão válida).
+ * Exposto via google.script.run.buscarProprietarioEndpoint(token, id).
+ * @param {string} token UUID da sessão
+ * @param {number} id ID do proprietário
+ * @returns {Object} Dados do proprietário ou {error: string}
+ */
+function buscarProprietarioEndpoint(token, id) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    try {
+        var proprietario = buscarProprietarioPorId(id);
+        if (!proprietario) return { error: 'Proprietario nao encontrado.' };
+        return proprietario;
+    } catch (error) {
+        return { error: error.message };
+    }
+}

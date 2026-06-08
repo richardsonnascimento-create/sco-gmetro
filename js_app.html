@@ -27,6 +27,7 @@
 
                 this.validateAndShowApp(token);
                 this.initNavbarLogic();
+                this.bindNavLinks(token);
                 this.bindLogout(token);
             } catch (error) {
                 console.error('[App.init] Erro:', error);
@@ -225,6 +226,24 @@
             });
         },
 
+        bindNavLinks(token) {
+            const navProprietario = document.getElementById('navProprietario');
+            if (navProprietario) {
+                navProprietario.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.toggleProprietario(token);
+                });
+            }
+
+            const navHome = document.getElementById('navHome');
+            if (navHome) {
+                navHome.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    this.showHome();
+                });
+            }
+        },
+
         bindLogout(token) {
             const logoutBtn = document.getElementById('logoutBtn');
             if (logoutBtn) {
@@ -246,6 +265,19 @@
                     }
                 });
             }
+        },
+
+        toggleProprietario(token) {
+            document.getElementById('pageHome').style.display = 'none';
+            document.getElementById('pageProprietario').style.display = 'block';
+            Proprietario.init(token);
+        },
+
+        showHome() {
+            document.getElementById('pageHome').style.display = 'block';
+            document.getElementById('pageProprietario').style.display = 'none';
+            const adminScreen = document.getElementById('adminScreen');
+            if (adminScreen) adminScreen.style.display = 'none';
         }
     };
 
