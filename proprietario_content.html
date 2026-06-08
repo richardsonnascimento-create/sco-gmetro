@@ -59,10 +59,15 @@
                         <label for="cnpjProprietario">
                             CNPJ <span class="required-star">*</span>
                         </label>
-                        <div class="input-wrapper">
-                            <i class="bx bx-barcode input-icon"></i>
-                            <input type="text" id="cnpjProprietario" required aria-required="true" placeholder="00.000.000/0000-00" maxlength="18">
-                            <i class="bx validation-icon" id="cnpjProprietarioIcon"></i>
+                        <div class="cnpj-input-row">
+                            <div class="input-wrapper" style="flex:1;">
+                                <i class="bx bx-barcode input-icon"></i>
+                                <input type="text" id="cnpjProprietario" required aria-required="true" placeholder="00.000.000/0000-00" maxlength="18">
+                                <i class="bx validation-icon" id="cnpjProprietarioIcon"></i>
+                            </div>
+                            <button type="button" id="btnConsultarCNPJ" class="btn-consultar-cnpj" title="Consultar CNPJ">
+                                <i class="bx bx-search"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -262,6 +267,8 @@
         _initialFormData: null,
         _searchTimer: null,
         _sortState: { col: null, dir: 'asc' },
+        _lastConsultedCNPJ: '',
+        _consultarTimer: null,
 
         init(token) {
             console.log('[Proprietario] init iniciado');
@@ -305,6 +312,14 @@
             let btnClear = document.getElementById('btnClearFilters');
             if (btnClear) {
                 btnClear.addEventListener('click', () => this._clearFilters());
+            }
+
+            let btnConsultar = document.getElementById('btnConsultarCNPJ');
+            if (btnConsultar) {
+                btnConsultar.addEventListener('click', () => {
+                    clearTimeout(this._consultarTimer);
+                    this.consultarCNPJ();
+                });
             }
 
             document.addEventListener('keydown', (e) => {
@@ -509,8 +524,15 @@
                 cnpj.addEventListener('blur', () => {
                     if (cnpj.value && !Validation.validarCNPJ(cnpj.value)) {
                         this._showFieldError(cnpj, 'CNPJ inválido');
-                    } else if (cnpj.value) {
+                        return;
+                    }
+                    if (cnpj.value) {
                         this._showFieldValid(cnpj);
+                    }
+                    clearTimeout(this._consultarTimer);
+                    let digits = cnpj.value.replace(/\D/g, '');
+                    if (digits.length === 14 && digits !== this._lastConsultedCNPJ) {
+                        this._consultarTimer = setTimeout(() => this.consultarCNPJ(), 500);
                     }
                 });
             }
@@ -1076,6 +1098,67 @@
             win.document.close();
 
             setTimeout(() => { win.print(); }, 500);
+        },
+
+        consultarCNPJ() {
+            let cnpjInput = document.getElementById('cnpjProprietario');
+            if (!cnpjInput) return;
+
+            let cnpj = cnpjInput.value.replace(/\D/g, '');
+
+            if (cnpj.length !== 14) {
+                Message.show('CNPJ invalido. Digite 14 digitos.', 'error');
+                return;
+            }
+
+            if (!Validation.validarCNPJ(cnpj)) {
+                Message.show('CNPJ invalido. Verifique os digitos verificadores.', 'error');
+                return;
+            }
+
+            let btn = document.getElementById('btnConsultarCNPJ');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i>';
+            btn.title = 'Consultando...';
+
+            google.script.run
+                .withSuccessHandler((data) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-search"></i>';
+                    btn.title = 'Consultar CNPJ';
+
+                    if (data && data.error) {
+                        Message.show(data.error, 'error');
+                        return;
+                    }
+
+                    this._lastConsultedCNPJ = cnpj;
+                    this._setFormData(data);
+                    Message.show('CNPJ consultado com sucesso!', 'success');
+                    this._highlightFilledFields();
+                })
+                .withFailureHandler(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-search"></i>';
+                    btn.title = 'Consultar CNPJ';
+                    Message.show('Servico temporariamente indisponivel. Preencha manualmente.', 'error');
+                })
+                .consultarCnpjEndpoint(this.token, cnpj);
+        },
+
+        _highlightFilledFields() {
+            let fields = [
+                'razaoSocial', 'logradouro', 'numero', 'complemento',
+                'bairro', 'municipio', 'UF', 'CEP', 'email',
+                'telefone', 'situacaoCadastral', 'CNAE',
+            ];
+            fields.forEach((id) => {
+                let el = document.getElementById(id);
+                if (el && el.value) {
+                    el.classList.add('cnpj-filled');
+                    setTimeout(() => el.classList.remove('cnpj-filled'), 2000);
+                }
+            });
         },
 
         _esc(text) {

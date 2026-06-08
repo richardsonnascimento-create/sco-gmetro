@@ -532,6 +532,82 @@ function _csvCell_(valor) {
     return s;
 }
 
+/**
+ * Consulta CNPJ na API pública do OpenCNPJ (https://api.opencnpj.org/{cnpj}).
+ * Utiliza CacheService (1h TTL) para evitar consultas repetidas do mesmo CNPJ.
+ * @param {string} cnpj CNPJ com ou sem máscara (pontos, barras, traços)
+ * @returns {Object} Retorna objeto com os campos mapeados do proprietário,
+ *   ou {error: string} em caso de falha. Campos retornados em formato raw
+ *   (sem máscara) — a formatação é feita pelo frontend.
+ */
+function consultarCNPJ(cnpj) {
+    var digits = String(cnpj).replace(/\D/g, '');
+
+    if (digits.length !== 14) {
+        return { error: 'CNPJ invalido.' };
+    }
+
+    var cache = CacheService.getScriptCache();
+    var cacheKey = 'cnpj_' + digits;
+    var cached = cache.get(cacheKey);
+
+    if (cached) {
+        console.log('[consultarCNPJ] Cache hit para CNPJ:', digits);
+        return JSON.parse(cached);
+    }
+
+    var url = 'https://api.opencnpj.org/' + digits;
+
+    try {
+        var response = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+        var code = response.getResponseCode();
+
+        if (code === 404) {
+            console.warn('[consultarCNPJ] CNPJ nao encontrado:', digits);
+            return { error: 'CNPJ nao encontrado.' };
+        }
+
+        if (code !== 200) {
+            console.warn('[consultarCNPJ] HTTP', code, 'para CNPJ:', digits);
+            return { error: 'Servico indisponivel. Tente novamente.' };
+        }
+
+        var json = JSON.parse(response.getContentText());
+
+        if (!json || !json.razao_social) {
+            return { error: 'CNPJ nao encontrado.' };
+        }
+
+        var telefone = '';
+        if (json.telefones && json.telefones.length > 0) {
+            telefone = (json.telefones[0].ddd || '') + (json.telefones[0].numero || '');
+        }
+
+        var result = {
+            razaoSocial: json.razao_social || '',
+            cnpjProprietario: digits,
+            logradouro: json.logradouro || '',
+            numero: json.numero || '',
+            complemento: json.complemento || '',
+            bairro: json.bairro || '',
+            municipio: json.municipio || '',
+            UF: json.uf || '',
+            CEP: String(json.cep || '').replace(/\D/g, ''),
+            situacaoCadastral: json.situacao_cadastral || '',
+            CNAE: json.cnae_principal ? String(json.cnae_principal) : '',
+            telefone: telefone,
+            email: json.email ? String(json.email).toLowerCase() : '',
+        };
+
+        cache.put(cacheKey, JSON.stringify(result), 3600);
+        console.log('[consultarCNPJ] Sucesso para CNPJ:', digits);
+        return result;
+    } catch (error) {
+        console.error('[consultarCNPJ] Erro de rede ao consultar CNPJ', digits + ':', error.message);
+        return { error: 'Servico indisponivel. Tente novamente.' };
+    }
+}
+
 // ============================================================
 // EXEMPLO DE USO (descomente para testar)
 // ============================================================

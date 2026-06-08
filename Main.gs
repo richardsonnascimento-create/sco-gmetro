@@ -282,3 +282,22 @@ function exportarProprietariosCSVEndpoint(token, search) {
         return { success: false, message: error.message };
     }
 }
+
+/**
+ * Endpoint: consulta CNPJ na ReceitaWS (requer sessão válida).
+ * Exposto via google.script.run.consultarCnpjEndpoint(token, cnpj).
+ * @param {string} token UUID da sessão
+ * @param {string} cnpj CNPJ com ou sem máscara
+ * @returns {Object} Dados mapeados do proprietário ou {error: string}
+ */
+function consultarCnpjEndpoint(token, cnpj) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    console.log('[consultarCnpjEndpoint] CNPJ:', cnpj ? cnpj.substring(0, 6) + '...' : 'null');
+    try {
+        return consultarCNPJ(cnpj);
+    } catch (error) {
+        console.error('[consultarCnpjEndpoint] erro:', error.message);
+        return { error: error.message };
+    }
+}

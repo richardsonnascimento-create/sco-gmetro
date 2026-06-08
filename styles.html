@@ -1537,4 +1537,49 @@
             grid-template-columns: 1fr 1fr;
         }
     }
+
+    /* === Consultar CNPJ Button === */
+    .btn-consultar-cnpj {
+        padding: 10px 14px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        background: var(--white);
+        color: var(--primary-color);
+        cursor: pointer;
+        font-size: 18px;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .btn-consultar-cnpj:hover {
+        border-color: var(--primary-color);
+        background: #f0f4ff;
+    }
+
+    .btn-consultar-cnpj:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .cnpj-input-row {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    /* Highlight verde temporário nos campos preenchidos pela consulta CNPJ */
+    @keyframes cnpjFilled {
+        0%   { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2); }
+        70%  { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2); }
+        100% { border-color: #e0e0e0; box-shadow: none; }
+    }
+
+    .form-group input.cnpj-filled,
+    .form-group select.cnpj-filled {
+        animation: cnpjFilled 2s ease-out;
+    }
 </style>
