@@ -171,14 +171,17 @@
             }
 
             if (typeof google !== 'undefined' && google.script && google.script.run) {
+                Loading.show();
                 google.script.run
                     .withSuccessHandler((response) => {
                         this.handleLoginResponse(response);
                         this.setButtonLoading(submitBtn, false);
+                        Loading.hide();
                     })
                     .withFailureHandler((error) => {
                         this.handleAuthFailure(error);
                         this.setButtonLoading(submitBtn, false);
+                        Loading.hide();
                     })
                     .loginUser(email, password);
             } else {
@@ -189,13 +192,36 @@
             }
         },
 
+        navigateToUrl(url) {
+            try {
+                if (window.self !== window.top) {
+                    window.top.location.href = url;
+                    return;
+                }
+            } catch (error) {
+                console.warn('[Auth.navigateToUrl] top navigation failed', error);
+            }
+            window.location.href = url;
+        },
+
         handleLoginResponse(response) {
-            Loading.hide();
+            console.log('[Auth.handleLoginResponse] response:', response);
             if (response.success && response.token) {
-                sessionStorage.setItem('sco_token', response.token);
-                window.location.href = '?token=' + response.token;
+                sessionStorage.setItem("sco_token", response.token);
+
+                if (typeof App !== 'undefined' && App && typeof App.showApp === 'function') {
+                    console.log('[Auth.handleLoginResponse] exibindo app na mesma URL');
+                    App.showApp(response.token);
+                    return;
+                }
+
+                // Fallback para pagina dedicada caso App nao exista.
+                const baseUrl = window.location.href.split('?')[0].split('#')[0];
+                const redirectUrl = baseUrl + '?token=' + encodeURIComponent(response.token);
+                console.log('[Auth.handleLoginResponse] redirectUrl:', redirectUrl);
+                this.navigateToUrl(redirectUrl);
             } else {
-                Message.show(response.message, 'error');
+                Message.show(response.message, "error");
             }
         },
 

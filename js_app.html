@@ -3,13 +3,28 @@
         init() {
             try {
                 console.log('[App.init] iniciando...');
+                console.log('[App.init] current URL:', window.location.href);
                 const token = this.getToken();
                 console.log('[App.init] token:', token ? 'encontrado' : 'ausente');
+
                 if (!token) {
+                    if (document.getElementById('loginScreen')) {
+                        console.log('[App.init] pagina de login detectada, aguardando autenticacao.');
+                        Loading.hide();
+                        this.resetLoginScreen();
+                        return;
+                    }
                     console.log('[App.init] sem token, redirecionando para login');
                     this.redirectToLogin();
                     return;
                 }
+
+                if (document.getElementById('loginScreen')) {
+                    console.log('[App.init] token encontrado em pagina de login, exibindo app sem mudar URL.');
+                    this.showApp(token);
+                    return;
+                }
+
                 this.validateAndShowApp(token);
                 this.initNavbarLogic();
                 this.bindLogout(token);
@@ -27,21 +42,80 @@
 
             if (urlToken && !sessionToken) {
                 sessionStorage.setItem('sco_token', urlToken);
-                const cleanUrl = window.location.pathname;
-                window.history.replaceState({}, document.title, cleanUrl);
-                console.log('[getToken] token salvo no sessionStorage e URL limpa');
+                console.log('[App.getToken] armazenou token da URL em sessionStorage');
                 return urlToken;
             }
 
             return sessionToken || urlToken;
         },
 
+        getBaseUrl() {
+            return window.location.href.split('?')[0].split('#')[0];
+        },
+
+        navigateToUrl(url) {
+            try {
+                if (window.self !== window.top) {
+                    window.top.location.href = url;
+                    return;
+                }
+            } catch (error) {
+                console.warn('[App.navigateToUrl] top navigation failed', error);
+            }
+            window.location.href = url;
+        },
+
         redirectToLogin() {
-            window.location.href = window.location.pathname;
+            this.navigateToUrl(this.getBaseUrl());
+        },
+
+        showLogin() {
+            const loginScreen = document.getElementById('loginScreen');
+            const appScreen = document.getElementById('appScreen');
+
+            if (appScreen) {
+                appScreen.style.display = 'none';
+            }
+            if (loginScreen) {
+                loginScreen.style.display = 'flex';
+            }
+
+            Loading.hide();
+            this.resetLoginScreen();
+            sessionStorage.removeItem('sco_token');
+        },
+
+        resetLoginScreen() {
+            const loginForm = document.getElementById('loginForm');
+            if (loginForm) {
+                loginForm.reset();
+            }
+            document.querySelectorAll('.field-error').forEach((errorEl) => {
+                errorEl.remove();
+            });
+        },
+
+        showApp(token) {
+            const loginScreen = document.getElementById('loginScreen');
+            const appScreen = document.getElementById('appScreen');
+
+            if (loginScreen) {
+                loginScreen.style.display = 'none';
+            }
+            if (appScreen) {
+                appScreen.style.display = 'flex';
+            }
+
+            Loading.hide();
+            sessionStorage.setItem('sco_token', token);
+            this.validateAndShowApp(token);
+            this.initNavbarLogic();
+            this.bindLogout(token);
         },
 
         validateAndShowApp(token) {
             console.log('[validateAndShowApp] validando token...');
+            Loading.show();
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((response) => {
@@ -53,14 +127,19 @@
                             }
                         } else {
                             sessionStorage.removeItem('sco_token');
-                            this.redirectToLogin();
+                            this.showLogin();
                         }
+                        Loading.hide();
                     })
                     .withFailureHandler((error) => {
-                        console.error('[validateAndShowApp] erro:', error);
-                        this.redirectToLogin();
+                        console.error("[validateAndShowApp] erro:", error);
+                        Message.show("Erro ao validar a sessao. Por favor, tente novamente.", "error");
+                        this.showLogin();
+                        Loading.hide();
                     })
                     .checkSession(token);
+            } else {
+                Loading.hide();
             }
         },
 
@@ -97,22 +176,29 @@
                     if (typeof google !== 'undefined' && google.script && google.script.run) {
                         google.script.run
                             .withSuccessHandler(() => {
-                                sessionStorage.removeItem('sco_token');
-                                window.location.href = window.location.pathname;
+                                this.showLogin();
                             })
-                            .withFailureHandler(() => {
-                                sessionStorage.removeItem('sco_token');
-                                window.location.href = window.location.pathname;
+                            .withFailureHandler((error) => {
+                                console.error("Erro durante o logout:", error);
+                                Message.show("Erro ao fazer logout. Por favor, tente novamente.", "error");
+                                this.showLogin();
                             })
                             .logoutUser(token);
                     } else {
-                        sessionStorage.removeItem('sco_token');
-                        window.location.href = window.location.pathname;
+                        this.showLogin();
                     }
                 });
             }
         }
     };
+
+    window.addEventListener('error', (event) => {
+        console.error('[App.window.error]', event.message, event.filename, event.lineno, event.colno, event.error);
+    });
+
+    window.addEventListener('unhandledrejection', (event) => {
+        console.error('[App.unhandledrejection]', event.reason);
+    });
 
     document.addEventListener('DOMContentLoaded', () => {
         App.init();
