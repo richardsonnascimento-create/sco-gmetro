@@ -224,10 +224,15 @@ function excluirProprietarioEndpoint(token, id) {
  */
 function listarProprietariosEndpoint(token) {
     var email = validateSession(token);
-    if (!email) return { error: 'Sessao invalida.' };
+    if (!email) {
+        console.log('[listarProprietariosEndpoint] token invalido');
+        return { error: 'Sessao invalida.' };
+    }
+    console.log('[listarProprietariosEndpoint] token valido, chamando servico');
     try {
         return listarProprietarios();
     } catch (error) {
+        console.log('[listarProprietariosEndpoint] erro:', error.message);
         return { error: error.message };
     }
 }
@@ -242,11 +247,38 @@ function listarProprietariosEndpoint(token) {
 function buscarProprietarioEndpoint(token, id) {
     var email = validateSession(token);
     if (!email) return { error: 'Sessao invalida.' };
+    console.log('[buscarProprietarioEndpoint] buscando ID:', id);
     try {
         var proprietario = buscarProprietarioPorId(id);
         if (!proprietario) return { error: 'Proprietario nao encontrado.' };
+        console.log('[buscarProprietarioEndpoint] encontrado:', proprietario.razaoSocial);
         return proprietario;
     } catch (error) {
+        console.log('[buscarProprietarioEndpoint] erro:', error.message);
         return { error: error.message };
+    }
+}
+
+/**
+ * Endpoint: exporta proprietários como CSV (requer sessão válida).
+ * Se search for informado, filtra os resultados.
+ * Exposto via google.script.run.exportarProprietariosCSVEndpoint(token, search).
+ * @param {string} token UUID da sessão
+ * @param {string} search Termo opcional de filtro
+ * @returns {Object} {success: boolean, csv?: string, message?: string}
+ */
+function exportarProprietariosCSVEndpoint(token, search) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    console.log('[exportarProprietariosCSVEndpoint] search:', search || '(todos)');
+    try {
+        var csv = gerarCSVProprietarios(search);
+        if (csv.indexOf('Erro') === 0) {
+            return { success: false, message: csv };
+        }
+        return { success: true, csv: csv };
+    } catch (error) {
+        console.error('[exportarProprietariosCSVEndpoint] erro:', error.message);
+        return { success: false, message: error.message };
     }
 }

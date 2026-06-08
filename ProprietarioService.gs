@@ -10,10 +10,17 @@
 var DB_Principal = PropertiesService.getScriptProperties().getProperty('ID_PRINCIPAL');
 
 if (!DB_Principal) {
+    // Fallback para SHEETS_ID (Config.gs) se ID_PRINCIPAL nao estiver definido
+    DB_Principal = typeof SHEETS_ID !== 'undefined' ? SHEETS_ID : null;
+}
+
+if (!DB_Principal) {
     throw new Error(
-        'Propriedade ID_PRINCIPAL nao configurada. Defina o ID da planilha DB_Principal.',
+        'Nenhuma planilha configurada. Defina ID_PRINCIPAL ou SHEETS_ID nas Script Properties.',
     );
 }
+
+console.log('[ProprietarioService] Usando planilha ID:', DB_Principal);
 
 /** Nome da aba onde os proprietários são armazenados. */
 var SHEET_NAME_PROPRIETARIOS = 'Proprietarios';
@@ -57,9 +64,11 @@ function getProprietariosSheet() {
         var sheet = spreadsheet.getSheetByName(SHEET_NAME_PROPRIETARIOS);
 
         if (!sheet) {
+            console.log('[getProprietariosSheet] Aba "' + SHEET_NAME_PROPRIETARIOS + '" nao existe, criando...');
             sheet = spreadsheet.insertSheet(SHEET_NAME_PROPRIETARIOS);
             sheet.getRange(1, 1, 1, COLUNAS_PROPRIETARIOS.length).setValues([COLUNAS_PROPRIETARIOS]);
             sheet.getRange(1, 1, 1, COLUNAS_PROPRIETARIOS.length).setFontWeight('bold');
+            console.log('[getProprietariosSheet] Aba criada com cabecalho de ' + COLUNAS_PROPRIETARIOS.length + ' colunas.');
         }
 
         return sheet;
@@ -132,6 +141,54 @@ function cnpjJaExiste(cnpj) {
 }
 
 /**
+ * Valida os dígitos verificadores de um CNPJ (14 dígitos).
+ * @param {string} cnpj CNPJ (com ou sem máscara)
+ * @returns {boolean} true se o CNPJ for válido
+ */
+function _validarCNPJ_(cnpj) {
+    var digits = String(cnpj).replace(/\D/g, '');
+    if (digits.length !== 14) return false;
+    if (/^(\d)\1{13}$/.test(digits)) return false;
+
+    var calc = function (nums, weights) {
+        var sum = 0;
+        for (var i = 0; i < nums.length; i++) {
+            sum += parseInt(nums[i], 10) * weights[i];
+        }
+        var rest = sum % 11;
+        return rest < 2 ? 0 : 11 - rest;
+    };
+
+    var w1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+    var w2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+
+    if (calc(digits.substring(0, 12), w1) !== parseInt(digits[12], 10)) return false;
+    if (calc(digits.substring(0, 13), w2) !== parseInt(digits[13], 10)) return false;
+
+    return true;
+}
+
+/**
+ * Valida CEP: exatamente 8 dígitos numéricos.
+ * @param {string} cep CEP (com ou sem máscara)
+ * @returns {boolean}
+ */
+function _validarCEP_(cep) {
+    var digits = String(cep).replace(/\D/g, '');
+    return digits.length === 8;
+}
+
+/**
+ * Valida telefone: 10 ou 11 dígitos numéricos.
+ * @param {string} tel Telefone (com ou sem máscara)
+ * @returns {boolean}
+ */
+function _validarTelefone_(tel) {
+    var digits = String(tel).replace(/\D/g, '');
+    return digits.length >= 10 && digits.length <= 11;
+}
+
+/**
  * Insere um novo proprietário na aba "Proprietarios".
  * Valida duplicidade de CNPJ antes de inserir. Gera ID automaticamente.
  * Usa LockService para evitar duplicatas em requisições simultâneas.
@@ -156,9 +213,15 @@ function cnpjJaExiste(cnpj) {
  * @param {string} dados.codigoMunicipio
  * @param {string} dados.observacaoProprietario
  * @returns {number} O idProprietario gerado
- * @throws {Error} Se CNPJ já existir ou houver erro de acesso
+ * @throws {Error} Se CNPJ já existir, dados inválidos ou erro de acesso
  */
 function inserirProprietario(dados) {
+    if (!dados.razaoSocial) throw new Error('Razao Social obrigatoria.');
+    if (!dados.cnpjProprietario) throw new Error('CNPJ obrigatorio.');
+    if (!_validarCNPJ_(dados.cnpjProprietario)) throw new Error('CNPJ invalido.');
+    if (dados.CEP && !_validarCEP_(dados.CEP)) throw new Error('CEP invalido.');
+    if (dados.telefone && !_validarTelefone_(dados.telefone)) throw new Error('Telefone invalido.');
+
     var lock = LockService.getScriptLock();
     lock.tryLock(10000);
 
@@ -219,6 +282,10 @@ function inserirProprietario(dados) {
  * @throws {Error} Se ID não encontrado, CNPJ duplicado ou erro de acesso
  */
 function atualizarProprietario(idProprietario, dados) {
+    if (!_validarCNPJ_(dados.cnpjProprietario)) throw new Error('CNPJ invalido.');
+    if (dados.CEP && !_validarCEP_(dados.CEP)) throw new Error('CEP invalido.');
+    if (dados.telefone && !_validarTelefone_(dados.telefone)) throw new Error('Telefone invalido.');
+
     var lock = LockService.getScriptLock();
     lock.tryLock(10000);
 
@@ -353,6 +420,8 @@ function listarProprietarios() {
         var data = sheet.getDataRange().getValues();
         var proprietarios = [];
 
+        console.log('[listarProprietarios] Total de linhas (incluindo cabecalho):', data.length);
+
         for (var i = 1; i < data.length; i++) {
             var proprietario = {};
             for (var j = 0; j < COLUNAS_PROPRIETARIOS.length; j++) {
@@ -361,11 +430,106 @@ function listarProprietarios() {
             proprietarios.push(proprietario);
         }
 
+        console.log('[listarProprietarios] Retornando', proprietarios.length, 'proprietarios');
         return proprietarios;
     } catch (error) {
-        console.error('Erro ao listar proprietarios:', error);
-        throw new Error('Erro ao listar proprietarios.');
+        console.error('[listarProprietarios] Erro:', error);
+        return { error: 'Erro ao listar proprietarios: ' + error.message };
     }
+}
+
+/**
+ * Gera uma string CSV com os dados dos proprietários.
+ * Se search for fornecido, filtra por razaoSocial ou cnpjProprietario (case-insensitive).
+ * @param {string} [search] Termo opcional para filtrar
+ * @returns {string} Conteúdo CSV
+ */
+function gerarCSVProprietarios(search) {
+    try {
+        var proprietarios = listarProprietarios();
+        if (proprietarios.error) throw new Error(proprietarios.error);
+
+        if (search) {
+            var termo = String(search).toLowerCase().trim();
+            if (termo) {
+                proprietarios = proprietarios.filter(function (p) {
+                    return (String(p.razaoSocial || '').toLowerCase().indexOf(termo) !== -1)
+                        || (String(p.cnpjProprietario || '').toLowerCase().indexOf(termo) !== -1);
+                });
+            }
+        }
+
+        // CSV header + rows
+        var cabecalho = [
+            'ID',
+            'RazaoSocial',
+            'CNPJ',
+            'Logradouro',
+            'Numero',
+            'Complemento',
+            'CEP',
+            'Bairro',
+            'Municipio',
+            'UF',
+            'Email',
+            'Telefone',
+            'SituacaoCadastral',
+            'CNAE',
+            'Proprietario',
+            'Autorizacao',
+            'Regional',
+            'Sigla',
+            'CodigoMunicipio',
+            'Observacao',
+        ];
+
+        var linhas = [cabecalho.join(',')];
+
+        for (var i = 0; i < proprietarios.length; i++) {
+            var p = proprietarios[i];
+            var valores = [
+                p.idProprietario || '',
+                _csvCell_(p.razaoSocial || ''),
+                p.cnpjProprietario || '',
+                _csvCell_(p.logradouro || ''),
+                _csvCell_(p.numero || ''),
+                _csvCell_(p.complemento || ''),
+                p.CEP || '',
+                _csvCell_(p.bairro || ''),
+                _csvCell_(p.municipio || ''),
+                _csvCell_(p.UF || ''),
+                p.email || '',
+                p.telefone || '',
+                _csvCell_(p.situacaoCadastral || ''),
+                _csvCell_(p.CNAE || ''),
+                _csvCell_(p.proprietario || ''),
+                _csvCell_(p.autorizacao || ''),
+                _csvCell_(p.regional || ''),
+                _csvCell_(p.sigla || ''),
+                _csvCell_(p.codigoMunicipio || ''),
+                _csvCell_(p.observacaoProprietario || ''),
+            ];
+            linhas.push(valores.join(','));
+        }
+
+        return linhas.join('\n');
+    } catch (error) {
+        console.error('[gerarCSV] Erro:', error);
+        return 'Erro ao gerar CSV: ' + error.message;
+    }
+}
+
+/**
+ * Escapa célula CSV: envolve em aspas duplas se contiver vírgula, aspas ou quebra de linha.
+ * @param {string} valor
+ * @returns {string}
+ */
+function _csvCell_(valor) {
+    var s = String(valor);
+    if (s.indexOf(',') !== -1 || s.indexOf('"') !== -1 || s.indexOf('\n') !== -1) {
+        return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
 }
 
 // ============================================================

@@ -18,6 +18,97 @@
             if (passwordInput) {
                 passwordInput.type = isChecked ? 'text' : 'password';
             }
+        },
+
+        /**
+         * Valida CNPJ (14 dígitos, dígitos verificadores).
+         * Aceita string com ou sem máscara.
+         * @param {string} cnpj
+         * @returns {boolean}
+         */
+        validarCNPJ(cnpj) {
+            var digits = String(cnpj).replace(/\D/g, '');
+            if (digits.length !== 14) return false;
+            if (/^(\d)\1{13}$/.test(digits)) return false;
+
+            var calc = function (nums, weights) {
+                var sum = 0;
+                for (var i = 0; i < nums.length; i++) {
+                    sum += parseInt(nums[i], 10) * weights[i];
+                }
+                var rest = sum % 11;
+                return rest < 2 ? 0 : 11 - rest;
+            };
+
+            var w1 = [5,4,3,2,9,8,7,6,5,4,3,2];
+            var w2 = [6,5,4,3,2,9,8,7,6,5,4,3,2];
+
+            var dv1 = calc(digits.substring(0, 12), w1);
+            if (dv1 !== parseInt(digits[12], 10)) return false;
+
+            var dv2 = calc(digits.substring(0, 13), w2);
+            if (dv2 !== parseInt(digits[13], 10)) return false;
+
+            return true;
+        },
+
+        /**
+         * Valida CEP: exatamente 8 dígitos numéricos.
+         * @param {string} cep
+         * @returns {boolean}
+         */
+        validarCEP(cep) {
+            var digits = String(cep).replace(/\D/g, '');
+            return digits.length === 8;
+        },
+
+        /**
+         * Valida telefone: 10 ou 11 dígitos numéricos.
+         * @param {string} tel
+         * @returns {boolean}
+         */
+        validarTelefone(tel) {
+            var digits = String(tel).replace(/\D/g, '');
+            return digits.length >= 10 && digits.length <= 11;
+        },
+
+        /**
+         * Formata CNPJ: XX.XXX.XXX/XXXX-XX
+         * @param {string} cnpj
+         * @returns {string}
+         */
+        formatarCNPJ(cnpj) {
+            var d = String(cnpj).replace(/\D/g, '');
+            if (d.length !== 14) return cnpj || '';
+            return d.substring(0,2) + '.' + d.substring(2,5) + '.' + d.substring(5,8)
+                + '/' + d.substring(8,12) + '-' + d.substring(12,14);
+        },
+
+        /**
+         * Formata CEP: XXXXX-XXX
+         * @param {string} cep
+         * @returns {string}
+         */
+        formatarCEP(cep) {
+            var d = String(cep).replace(/\D/g, '');
+            if (d.length !== 8) return cep || '';
+            return d.substring(0,5) + '-' + d.substring(5,8);
+        },
+
+        /**
+         * Formata telefone: (XX) XXXXX-XXXX
+         * @param {string} tel
+         * @returns {string}
+         */
+        formatarTelefone(tel) {
+            var d = String(tel).replace(/\D/g, '');
+            if (d.length === 10) {
+                return '(' + d.substring(0,2) + ') ' + d.substring(2,6) + '-' + d.substring(6,10);
+            }
+            if (d.length === 11) {
+                return '(' + d.substring(0,2) + ') ' + d.substring(2,7) + '-' + d.substring(7,11);
+            }
+            return tel || '';
         }
     };
 </script>

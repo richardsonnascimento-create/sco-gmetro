@@ -111,6 +111,7 @@
             sessionStorage.setItem('sco_token', token);
             this.validateAndShowApp(token);
             this.initNavbarLogic();
+            this.bindNavLinks(token);
             this.bindLogout(token);
         },
 
@@ -268,14 +269,27 @@
         },
 
         toggleProprietario(token) {
-            document.getElementById('pageHome').style.display = 'none';
-            document.getElementById('pageProprietario').style.display = 'block';
-            Proprietario.init(token);
+            console.log('[App] toggleProprietario chamado');
+            const pageHome = document.getElementById('pageHome');
+            const pageProp = document.getElementById('pageProprietario');
+            if (pageHome) pageHome.style.display = 'none';
+            if (pageProp) {
+                pageProp.style.display = 'block';
+            } else {
+                console.error('[App] pageProprietario nao encontrado no DOM');
+            }
+            if (typeof Proprietario !== 'undefined' && Proprietario.init) {
+                Proprietario.init(token);
+            } else {
+                console.error('[App] Proprietario nao definido');
+            }
         },
 
         showHome() {
-            document.getElementById('pageHome').style.display = 'block';
-            document.getElementById('pageProprietario').style.display = 'none';
+            const pageHome = document.getElementById('pageHome');
+            const pageProp = document.getElementById('pageProprietario');
+            if (pageHome) pageHome.style.display = 'block';
+            if (pageProp) pageProp.style.display = 'none';
             const adminScreen = document.getElementById('adminScreen');
             if (adminScreen) adminScreen.style.display = 'none';
         }

@@ -1,154 +1,590 @@
 <div class="admin-container">
     <div class="proprietario-header">
-            <h2>Cadastro de Proprietários</h2>
-            <button class="btn-primary" id="btnNovoProprietario">+ Novo Proprietário</button>
-        </div>
+        <h2><i class="bx bx-buildings"></i> Cadastro de Proprietários</h2>
+        <button class="btn-primary" id="btnNovoProprietario">
+            <i class="bx bx-plus"></i> Novo Proprietário
+        </button>
+    </div>
 
-        <div id="proprietarioListView">
-            <div class="proprietario-toolbar">
-                <input type="text" id="proprietarioSearch" placeholder="Buscar por razão social ou CNPJ..." class="search-input">
+    <div id="proprietarioListView">
+        <div class="proprietario-toolbar">
+            <div class="toolbar-row">
+                <input type="text" id="proprietarioSearch" placeholder="Buscar por razão social ou CNPJ..." class="search-input" style="flex:1;min-width:200px;" aria-label="Filtrar por razão social ou CNPJ">
+                <select id="situacaoFilter" class="filter-select" aria-label="Filtrar por situação cadastral">
+                    <option value="">Todas as situações</option>
+                    <option value="Ativo">Ativo</option>
+                    <option value="Inativo">Inativo</option>
+                    <option value="Suspenso">Suspenso</option>
+                </select>
+                <button class="btn-secondary" id="btnClearFilters" title="Limpar filtros">
+                    <i class="bx bx-x"></i> Limpar
+                </button>
+                <div class="toolbar-actions">
+                    <button class="btn-primary btn-export" id="btnExportCSV" title="Exportar CSV">
+                        <i class="bx bx-download"></i> CSV
+                    </button>
+                    <button class="btn-primary btn-export" id="btnExportPDF" title="Exportar PDF">
+                        <i class="bx bx-file"></i> PDF
+                    </button>
+                </div>
             </div>
-            <div id="proprietarioTableContainer">
-                <div class="admin-empty">Carregando proprietários...</div>
-            </div>
         </div>
-
-        <div id="proprietarioFormView" style="display: none;">
-            <h3 id="proprietarioFormTitle">Novo Proprietário</h3>
-            <form id="proprietarioForm" class="form-grid" autocomplete="off">
-                <input type="hidden" id="editId" value="">
-
-                <div class="form-group full-width">
-                    <label for="razaoSocial">Razão Social *</label>
-                    <input type="text" id="razaoSocial" required>
-                </div>
-
-                <div class="form-group">
-                    <label for="cnpjProprietario">CNPJ *</label>
-                    <input type="text" id="cnpjProprietario" required placeholder="00.000.000/0000-00">
-                </div>
-
-                <div class="form-group">
-                    <label for="situacaoCadastral">Situação Cadastral</label>
-                    <select id="situacaoCadastral">
-                        <option value="Ativo">Ativo</option>
-                        <option value="Inativo">Inativo</option>
-                        <option value="Suspenso">Suspenso</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="logradouro">Logradouro</label>
-                    <input type="text" id="logradouro" placeholder="Rua, Av, Travessa...">
-                </div>
-
-                <div class="form-group">
-                    <label for="numero">Número</label>
-                    <input type="text" id="numero">
-                </div>
-
-                <div class="form-group">
-                    <label for="complemento">Complemento</label>
-                    <input type="text" id="complemento" placeholder="Sala, Bloco, Andar...">
-                </div>
-
-                <div class="form-group">
-                    <label for="CEP">CEP</label>
-                    <input type="text" id="CEP" placeholder="00000-000">
-                </div>
-
-                <div class="form-group">
-                    <label for="bairro">Bairro</label>
-                    <input type="text" id="bairro">
-                </div>
-
-                <div class="form-group">
-                    <label for="municipio">Município</label>
-                    <input type="text" id="municipio">
-                </div>
-
-                <div class="form-group">
-                    <label for="UF">UF</label>
-                    <select id="UF">
-                        <option value="">--</option>
-                        <option value="AC">AC</option><option value="AL">AL</option>
-                        <option value="AP">AP</option><option value="AM">AM</option>
-                        <option value="BA">BA</option><option value="CE">CE</option>
-                        <option value="DF">DF</option><option value="ES">ES</option>
-                        <option value="GO">GO</option><option value="MA">MA</option>
-                        <option value="MT">MT</option><option value="MS">MS</option>
-                        <option value="MG">MG</option><option value="PA">PA</option>
-                        <option value="PB">PB</option><option value="PR">PR</option>
-                        <option value="PE">PE</option><option value="PI">PI</option>
-                        <option value="RJ">RJ</option><option value="RN">RN</option>
-                        <option value="RS">RS</option><option value="RO">RO</option>
-                        <option value="RR">RR</option><option value="SC">SC</option>
-                        <option value="SP">SP</option><option value="SE">SE</option>
-                        <option value="TO">TO</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="codigoMunicipio">Cód. Município</label>
-                    <input type="text" id="codigoMunicipio" placeholder="Código IBGE">
-                </div>
-
-                <div class="form-group">
-                    <label for="email">E-mail</label>
-                    <input type="email" id="email" placeholder="contato@exemplo.com">
-                </div>
-
-                <div class="form-group">
-                    <label for="telefone">Telefone</label>
-                    <input type="text" id="telefone" placeholder="(00) 00000-0000">
-                </div>
-
-                <div class="form-group">
-                    <label for="CNAE">CNAE</label>
-                    <input type="text" id="CNAE" placeholder="0000-0/00">
-                </div>
-
-                <div class="form-group">
-                    <label for="proprietario">Proprietário</label>
-                    <input type="text" id="proprietario" placeholder="Nome da pessoa física">
-                </div>
-
-                <div class="form-group">
-                    <label for="autorizacao">Autorização</label>
-                    <input type="text" id="autorizacao">
-                </div>
-
-                <div class="form-group">
-                    <label for="regional">Regional</label>
-                    <input type="text" id="regional">
-                </div>
-
-                <div class="form-group">
-                    <label for="sigla">Sigla</label>
-                    <input type="text" id="sigla" maxlength="10">
-                </div>
-
-                <div class="form-group full-width">
-                    <label for="observacaoProprietario">Observações</label>
-                    <textarea id="observacaoProprietario" rows="3"></textarea>
-                </div>
-
-                <div class="form-actions full-width">
-                    <button type="submit" class="btn-primary" id="btnSalvarProprietario">Salvar</button>
-                    <button type="button" class="btn-secondary" id="btnCancelarProprietario">Cancelar</button>
-                </div>
-            </form>
+        <div id="proprietarioRecordCount" class="record-count" aria-live="polite"></div>
+        <div id="proprietarioTableContainer">
+            <div class="admin-empty">Carregando proprietários...</div>
         </div>
     </div>
 
+    <div id="proprietarioFormView" style="display: none;">
+        <h3 id="proprietarioFormTitle">Novo Proprietário</h3>
+        <form id="proprietarioForm" autocomplete="off">
+            <input type="hidden" id="editId" value="">
+
+            <fieldset class="proprietario-fieldset">
+                <legend><i class="bx bx-buildings"></i> Dados da Empresa</legend>
+                <div class="fieldset-grid">
+                    <div class="form-group full-width">
+                        <label for="razaoSocial">
+                            Razão Social <span class="required-star">*</span>
+                            <span class="required-hint">(obrigatório)</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-buildings input-icon"></i>
+                            <input type="text" id="razaoSocial" required aria-required="true" placeholder="Nome completo da empresa">
+                            <i class="bx validation-icon" id="razaoSocialIcon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cnpjProprietario">
+                            CNPJ <span class="required-star">*</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-barcode input-icon"></i>
+                            <input type="text" id="cnpjProprietario" required aria-required="true" placeholder="00.000.000/0000-00" maxlength="18">
+                            <i class="bx validation-icon" id="cnpjProprietarioIcon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="situacaoCadastral">Situação Cadastral</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-toggle-left input-icon"></i>
+                            <select id="situacaoCadastral">
+                                <option value="Ativo">Ativo</option>
+                                <option value="Inativo">Inativo</option>
+                                <option value="Suspenso">Suspenso</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="CNAE">CNAE</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-chip input-icon"></i>
+                            <input type="text" id="CNAE" placeholder="0000-0/00">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="proprietario-fieldset">
+                <legend><i class="bx bx-map"></i> Endereço</legend>
+                <div class="fieldset-grid">
+                    <div class="form-group">
+                        <label for="CEP">CEP</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-mailbox input-icon"></i>
+                            <input type="text" id="CEP" placeholder="00000-000" maxlength="9">
+                            <i class="bx validation-icon" id="CEPIcon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="logradouro">Logradouro</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-map-pin input-icon"></i>
+                            <input type="text" id="logradouro" placeholder="Rua, Av, Travessa...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="numero">Número</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-hash input-icon"></i>
+                            <input type="text" id="numero" placeholder="Nº">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="complemento">Complemento</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-plus input-icon"></i>
+                            <input type="text" id="complemento" placeholder="Sala, Bloco, Andar...">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="bairro">Bairro</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-current-location input-icon"></i>
+                            <input type="text" id="bairro" placeholder="Bairro">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="municipio">Município</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-city input-icon"></i>
+                            <input type="text" id="municipio" placeholder="Município">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="UF">UF</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-flag input-icon"></i>
+                            <select id="UF">
+                                <option value="">--</option>
+                                <option value="AC">AC</option><option value="AL">AL</option>
+                                <option value="AP">AP</option><option value="AM">AM</option>
+                                <option value="BA">BA</option><option value="CE">CE</option>
+                                <option value="DF">DF</option><option value="ES">ES</option>
+                                <option value="GO">GO</option><option value="MA">MA</option>
+                                <option value="MT">MT</option><option value="MS">MS</option>
+                                <option value="MG">MG</option><option value="PA">PA</option>
+                                <option value="PB">PB</option><option value="PR">PR</option>
+                                <option value="PE">PE</option><option value="PI">PI</option>
+                                <option value="RJ">RJ</option><option value="RN">RN</option>
+                                <option value="RS">RS</option><option value="RO">RO</option>
+                                <option value="RR">RR</option><option value="SC">SC</option>
+                                <option value="SP">SP</option><option value="SE">SE</option>
+                                <option value="TO">TO</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="codigoMunicipio">Cód. Município</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-hash input-icon"></i>
+                            <input type="text" id="codigoMunicipio" placeholder="Código IBGE">
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="proprietario-fieldset">
+                <legend><i class="bx bx-user"></i> Contato</legend>
+                <div class="fieldset-grid">
+                    <div class="form-group">
+                        <label for="email">E-mail</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-envelope input-icon"></i>
+                            <input type="email" id="email" placeholder="contato@exemplo.com">
+                            <i class="bx validation-icon" id="emailIcon"></i>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="telefone">Telefone</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-phone input-icon"></i>
+                            <input type="text" id="telefone" placeholder="(00) 00000-0000" maxlength="15">
+                            <i class="bx validation-icon" id="telefoneIcon"></i>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="proprietario-fieldset">
+                <legend><i class="bx bx-detail"></i> Informações Complementares</legend>
+                <div class="fieldset-grid">
+                    <div class="form-group">
+                        <label for="proprietario">Proprietário</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-user-circle input-icon"></i>
+                            <input type="text" id="proprietario" placeholder="Nome da pessoa física">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="autorizacao">Autorização</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-check-shield input-icon"></i>
+                            <input type="text" id="autorizacao">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="regional">Regional</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-map-alt input-icon"></i>
+                            <input type="text" id="regional">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sigla">Sigla</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-abbreviation input-icon"></i>
+                            <input type="text" id="sigla" maxlength="10" placeholder="Sigla">
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="observacaoProprietario">Observações</label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-comment input-icon"></i>
+                            <textarea id="observacaoProprietario" rows="3" placeholder="Observações adicionais..."></textarea>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="form-actions full-width">
+                <button type="submit" class="btn-primary" id="btnSalvarProprietario">
+                    <i class="bx bx-save"></i> Salvar
+                </button>
+                <button type="button" class="btn-secondary" id="btnCancelarProprietario">
+                    <i class="bx bx-arrow-back"></i> Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
-    const Proprietario = {
+    var Proprietario = {
         token: null,
         editId: null,
+        _allProprietarios: [],
+        _initialFormData: null,
+        _searchTimer: null,
+        _sortState: { col: null, dir: 'asc' },
 
         init(token) {
+            console.log('[Proprietario] init iniciado');
             this.token = token;
+            this._allProprietarios = [];
+            this._initialFormData = null;
+            this.bindEvents();
             this.loadList();
+        },
+
+        bindEvents() {
+            let form = document.getElementById('proprietarioForm');
+            if (form) {
+                form.addEventListener('submit', (e) => this.save(e));
+            }
+
+            let btnNovo = document.getElementById('btnNovoProprietario');
+            if (btnNovo) {
+                btnNovo.addEventListener('click', () => this.showForm(null, null));
+            }
+
+            let btnCancelar = document.getElementById('btnCancelarProprietario');
+            if (btnCancelar) {
+                btnCancelar.addEventListener('click', () => {
+                    if (this._isDirty() && !confirm('Há alterações não salvas. Deseja cancelar?')) return;
+                    this.showList();
+                    this.loadList();
+                });
+            }
+
+            let btnCSV = document.getElementById('btnExportCSV');
+            if (btnCSV) {
+                btnCSV.addEventListener('click', () => this.exportCSV());
+            }
+
+            let btnPDF = document.getElementById('btnExportPDF');
+            if (btnPDF) {
+                btnPDF.addEventListener('click', () => this.exportPDF());
+            }
+
+            let btnClear = document.getElementById('btnClearFilters');
+            if (btnClear) {
+                btnClear.addEventListener('click', () => this._clearFilters());
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && document.getElementById('proprietarioFormView').style.display !== 'none') {
+                    if (this._isDirty() && !confirm('Há alterações não salvas. Deseja cancelar?')) return;
+                    this.showList();
+                    this.loadList();
+                }
+            });
+
+            this._bindMasks();
+            this._bindValidation();
+            this._bindSearch();
+            this._bindFilterSelect();
+        },
+
+        _maskInput(id, maskFn) {
+            let input = document.getElementById(id);
+            if (!input) return;
+            let masking = false;
+            input.addEventListener('input', function () {
+                if (masking) return;
+                masking = true;
+
+                let start = this.selectionStart;
+                let oldVal = this.value;
+                let digits = oldVal.replace(/\D/g, '');
+
+                let digitCount = 0;
+                for (let i = 0; i < start && i < oldVal.length; i++) {
+                    if (/\d/.test(oldVal[i])) digitCount++;
+                }
+
+                let masked = maskFn(digits);
+
+                if (this.value !== masked) {
+                    this.value = masked;
+
+                    let newPos = 0, d = 0;
+                    for (let i = 0; i < masked.length; i++) {
+                        if (/\d/.test(masked[i])) d++;
+                        newPos = i + 1;
+                        if (d >= digitCount) break;
+                    }
+                    this.setSelectionRange(newPos, newPos);
+                }
+
+                masking = false;
+            });
+        },
+
+        _bindMasks() {
+            this._maskInput('cnpjProprietario', (digits) => {
+                digits = digits.substring(0, 14);
+                let masked = '';
+                for (let i = 0; i < digits.length; i++) {
+                    if (i === 2 || i === 5) masked += '.';
+                    if (i === 8) masked += '/';
+                    if (i === 12) masked += '-';
+                    masked += digits[i];
+                }
+                return masked;
+            });
+
+            this._maskInput('CEP', (digits) => {
+                digits = digits.substring(0, 8);
+                return digits.length > 5
+                    ? digits.substring(0, 5) + '-' + digits.substring(5)
+                    : digits;
+            });
+
+            this._maskInput('telefone', (digits) => {
+                digits = digits.substring(0, 11);
+                let masked = '';
+                for (let i = 0; i < digits.length; i++) {
+                    if (i === 0) masked += '(';
+                    if (i === 2) masked += ') ';
+                    if (i === 7) masked += '-';
+                    masked += digits[i];
+                }
+                return masked;
+            });
+        },
+
+        _showFieldError(input, message) {
+            input.classList.remove('is-valid');
+            input.classList.add('is-invalid');
+
+            let wrapper = input.closest('.input-wrapper');
+            if (wrapper) {
+                let icon = wrapper.querySelector('.validation-icon');
+                if (icon) {
+                    icon.className = 'bx bx-x-circle validation-icon is-invalid';
+                }
+            }
+
+            let parent = input.closest('.form-group') || input.parentElement;
+            if (!parent) return;
+            let errorSpan = parent.querySelector('.field-error');
+            if (!errorSpan) {
+                errorSpan = document.createElement('span');
+                errorSpan.className = 'field-error';
+                parent.appendChild(errorSpan);
+            }
+            errorSpan.innerHTML = '<i class="bx bx-error-circle"></i> ' + this._esc(message);
+        },
+
+        _clearFieldError(input) {
+            input.classList.remove('is-invalid');
+            input.classList.remove('is-valid');
+
+            let wrapper = input.closest('.input-wrapper');
+            if (wrapper) {
+                let icon = wrapper.querySelector('.validation-icon');
+                if (icon) {
+                    icon.className = 'bx validation-icon';
+                }
+            }
+
+            let parent = input.closest('.form-group') || input.parentElement;
+            if (!parent) return;
+            let errorSpan = parent.querySelector('.field-error');
+            if (errorSpan) errorSpan.remove();
+        },
+
+        _showFieldValid(input) {
+            input.classList.remove('is-invalid');
+            input.classList.add('is-valid');
+
+            let wrapper = input.closest('.input-wrapper');
+            if (wrapper) {
+                let icon = wrapper.querySelector('.validation-icon');
+                if (icon) {
+                    icon.className = 'bx bx-check-circle validation-icon is-valid';
+                }
+            }
+
+            let parent = input.closest('.form-group') || input.parentElement;
+            if (!parent) return;
+            let errorSpan = parent.querySelector('.field-error');
+            if (errorSpan) errorSpan.remove();
+        },
+
+        _validateSingleField(id, validatorFn, errorMsg) {
+            let input = document.getElementById(id);
+            if (!input) return true;
+            if (!input.value) {
+                this._clearFieldError(input);
+                return true;
+            }
+            if (validatorFn(input.value)) {
+                this._showFieldValid(input);
+                return true;
+            } else {
+                this._showFieldError(input, errorMsg);
+                return false;
+            }
+        },
+
+        _fetchEnderecoPorCEP(cep) {
+            let digits = String(cep).replace(/\D/g, '');
+            if (digits.length !== 8) return;
+
+            let cepInput = document.getElementById('CEP');
+            cepInput.classList.add('is-valid');
+
+            fetch('https://viacep.com.br/ws/' + digits + '/json/')
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.erro) {
+                        this._showFieldError(cepInput, 'CEP não encontrado');
+                    } else {
+                        this._showFieldValid(cepInput);
+                        if (data.logradouro) document.getElementById('logradouro').value = data.logradouro;
+                        if (data.bairro) document.getElementById('bairro').value = data.bairro;
+                        if (data.localidade) document.getElementById('municipio').value = data.localidade;
+                        if (data.uf) document.getElementById('UF').value = data.uf;
+                    }
+                })
+                .catch(() => {
+                    // Fallback silencioso - fetch falhou (offline/CORS), usuário preenche manualmente
+                    console.warn('[ViaCEP] fallback: CEP nao pode ser consultado');
+                });
+        },
+
+        _bindValidation() {
+            // CNPJ - valida em tempo real (após mask)
+            let cnpj = document.getElementById('cnpjProprietario');
+            if (cnpj) {
+                let cnpjTimer;
+                cnpj.addEventListener('input', () => {
+                    clearTimeout(cnpjTimer);
+                    cnpjTimer = setTimeout(() => {
+                        if (!cnpj.value) { this._clearFieldError(cnpj); return; }
+                        if (Validation.validarCNPJ(cnpj.value)) {
+                            this._showFieldValid(cnpj);
+                        } else {
+                            this._showFieldError(cnpj, 'CNPJ inválido');
+                        }
+                    }, 400);
+                });
+                cnpj.addEventListener('blur', () => {
+                    if (cnpj.value && !Validation.validarCNPJ(cnpj.value)) {
+                        this._showFieldError(cnpj, 'CNPJ inválido');
+                    } else if (cnpj.value) {
+                        this._showFieldValid(cnpj);
+                    }
+                });
+            }
+
+            // CEP - validar + ViaCEP
+            let cep = document.getElementById('CEP');
+            if (cep) {
+                cep.addEventListener('blur', () => {
+                    if (!cep.value) { this._clearFieldError(cep); return; }
+                    if (Validation.validarCEP(cep.value)) {
+                        this._showFieldValid(cep);
+                        this._fetchEnderecoPorCEP(cep.value);
+                    } else {
+                        this._showFieldError(cep, 'CEP deve ter 8 dígitos');
+                    }
+                });
+            }
+
+            // Telefone
+            let tel = document.getElementById('telefone');
+            if (tel) {
+                tel.addEventListener('blur', () => {
+                    this._validateSingleField('telefone', Validation.validarTelefone, 'Telefone deve ter 10 ou 11 dígitos');
+                });
+            }
+
+            // E-mail
+            let email = document.getElementById('email');
+            if (email) {
+                email.addEventListener('blur', () => {
+                    this._validateSingleField('email', Validation.validateEmail, 'E-mail inválido');
+                });
+            }
+        },
+
+        _bindSearch() {
+            let searchInput = document.getElementById('proprietarioSearch');
+            if (!searchInput) return;
+
+            searchInput.addEventListener('input', () => {
+                clearTimeout(this._searchTimer);
+                this._searchTimer = setTimeout(() => this._applyFilters(), 300);
+            });
+        },
+
+        _bindFilterSelect() {
+            let filter = document.getElementById('situacaoFilter');
+            if (filter) {
+                filter.addEventListener('change', () => this._applyFilters());
+            }
+        },
+
+        _clearFilters() {
+            let search = document.getElementById('proprietarioSearch');
+            if (search) search.value = '';
+            let filter = document.getElementById('situacaoFilter');
+            if (filter) filter.value = '';
+            this._applyFilters();
+        },
+
+        _applyFilters() {
+            let searchVal = (document.getElementById('proprietarioSearch').value || '').toLowerCase().trim();
+            let situacaoVal = document.getElementById('situacaoFilter').value;
+
+            let filtered = this._allProprietarios.filter((p) => {
+                if (situacaoVal && (p.situacaoCadastral || '') !== situacaoVal) return false;
+                if (searchVal) {
+                    let text = ((p.razaoSocial || '') + ' ' + (p.cnpjProprietario || '')).toLowerCase();
+                    if (text.indexOf(searchVal) === -1) return false;
+                }
+                return true;
+            });
+
+            this.renderTable(filtered);
         },
 
         showList() {
@@ -174,22 +610,35 @@
             } else {
                 document.getElementById('proprietarioForm').reset();
                 document.getElementById('editId').value = '';
+                this._clearValidationIcons();
             }
+
+            this._snapshotFormData();
+        },
+
+        _clearValidationIcons() {
+            document.querySelectorAll('.validation-icon').forEach((el) => {
+                el.className = 'bx validation-icon';
+            });
+            document.querySelectorAll('.is-valid, .is-invalid').forEach((el) => {
+                el.classList.remove('is-valid', 'is-invalid');
+            });
+            document.querySelectorAll('.field-error').forEach((el) => el.remove());
         },
 
         _setFormData(data) {
             document.getElementById('editId').value = data.idProprietario || '';
             document.getElementById('razaoSocial').value = data.razaoSocial || '';
-            document.getElementById('cnpjProprietario').value = data.cnpjProprietario || '';
+            document.getElementById('cnpjProprietario').value = Validation.formatarCNPJ(data.cnpjProprietario) || '';
             document.getElementById('logradouro').value = data.logradouro || '';
             document.getElementById('numero').value = data.numero || '';
             document.getElementById('complemento').value = data.complemento || '';
-            document.getElementById('CEP').value = data.CEP || '';
+            document.getElementById('CEP').value = Validation.formatarCEP(data.CEP) || '';
             document.getElementById('bairro').value = data.bairro || '';
             document.getElementById('municipio').value = data.municipio || '';
             document.getElementById('UF').value = data.UF || '';
             document.getElementById('email').value = data.email || '';
-            document.getElementById('telefone').value = data.telefone || '';
+            document.getElementById('telefone').value = Validation.formatarTelefone(data.telefone) || '';
             document.getElementById('situacaoCadastral').value = data.situacaoCadastral || 'Ativo';
             document.getElementById('CNAE').value = data.CNAE || '';
             document.getElementById('proprietario').value = data.proprietario || '';
@@ -198,21 +647,31 @@
             document.getElementById('sigla').value = data.sigla || '';
             document.getElementById('codigoMunicipio').value = data.codigoMunicipio || '';
             document.getElementById('observacaoProprietario').value = data.observacaoProprietario || '';
+            this._clearValidationIcons();
+        },
+
+        _snapshotFormData() {
+            this._initialFormData = JSON.stringify(this._getFormData());
+        },
+
+        _isDirty() {
+            if (!this._initialFormData) return false;
+            return JSON.stringify(this._getFormData()) !== this._initialFormData;
         },
 
         _getFormData() {
             return {
                 razaoSocial: document.getElementById('razaoSocial').value.trim(),
-                cnpjProprietario: document.getElementById('cnpjProprietario').value.trim(),
+                cnpjProprietario: document.getElementById('cnpjProprietario').value.replace(/\D/g, ''),
                 logradouro: document.getElementById('logradouro').value.trim(),
                 numero: document.getElementById('numero').value.trim(),
                 complemento: document.getElementById('complemento').value.trim(),
-                CEP: document.getElementById('CEP').value.trim(),
+                CEP: document.getElementById('CEP').value.replace(/\D/g, ''),
                 bairro: document.getElementById('bairro').value.trim(),
                 municipio: document.getElementById('municipio').value.trim(),
                 UF: document.getElementById('UF').value,
                 email: document.getElementById('email').value.trim(),
-                telefone: document.getElementById('telefone').value.trim(),
+                telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
                 situacaoCadastral: document.getElementById('situacaoCadastral').value,
                 CNAE: document.getElementById('CNAE').value.trim(),
                 proprietario: document.getElementById('proprietario').value.trim(),
@@ -224,28 +683,54 @@
             };
         },
 
+        _renderSkeleton(container) {
+            let html = '';
+            for (let i = 0; i < 5; i++) {
+                html += '<div class="skeleton-row">';
+                html += '<div class="skeleton-cell"></div>'.repeat(6);
+                html += '</div>';
+            }
+            container.innerHTML = html;
+        },
+
         loadList() {
             const container = document.getElementById('proprietarioTableContainer');
             if (!container) return;
-            container.innerHTML = '<div class="admin-empty">Carregando proprietários...</div>';
+            console.log('[Proprietario] loadList');
+            this._renderSkeleton(container);
             Loading.show();
 
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((data) => {
                         Loading.hide();
+                        console.log('[Proprietario] Dados recebidos');
                         if (data && data.error) {
                             container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
                             return;
                         }
-                        this.renderTable(data || []);
+                        this._allProprietarios = data || [];
+                        this._sortState = { col: null, dir: 'asc' };
+                        this.renderTable(this._allProprietarios);
                     })
                     .withFailureHandler((error) => {
                         Loading.hide();
+                        console.error('[Proprietario] Erro no loadList:', error);
                         container.innerHTML = '<div class="admin-empty">Erro ao carregar dados.</div>';
                         Message.show('Erro ao carregar proprietários.', 'error');
                     })
                     .listarProprietariosEndpoint(this.token);
+            } else {
+                console.warn('[Proprietario] google.script.run indisponivel');
+                Loading.hide();
+                container.innerHTML = '<div class="admin-empty">API do Google Apps Script indisponivel.</div>';
+            }
+        },
+
+        _updateRecordCount(visible, total) {
+            const el = document.getElementById('proprietarioRecordCount');
+            if (el) {
+                el.textContent = 'Mostrando ' + visible + ' de ' + total + ' proprietário' + (total !== 1 ? 's' : '');
             }
         },
 
@@ -253,31 +738,62 @@
             const container = document.getElementById('proprietarioTableContainer');
             if (!container) return;
 
+            this._updateRecordCount(proprietarios.length, this._allProprietarios.length);
+
             if (!proprietarios || proprietarios.length === 0) {
                 container.innerHTML = '<div class="admin-empty">Nenhum proprietário cadastrado.</div>';
                 return;
             }
 
-            var html = '<div class="table-responsive">';
+            const cols = [
+                { key: 'idProprietario', label: 'ID', sortable: true },
+                { key: 'razaoSocial', label: 'Razão Social', sortable: true },
+                { key: 'cnpjProprietario', label: 'CNPJ', sortable: true },
+                { key: 'municipio', label: 'Município/UF', sortable: true },
+                { key: 'situacaoCadastral', label: 'Situação', sortable: true },
+                { key: null, label: 'Ações', sortable: false },
+            ];
+
+            let html = '<div class="table-responsive">';
             html += '<table class="admin-table proprietario-table" role="table">';
             html += '<thead><tr>';
-            html += '<th>ID</th><th>Razão Social</th><th>CNPJ</th><th>Município/UF</th><th>Situação</th><th>Ações</th>';
+
+            for (let c = 0; c < cols.length; c++) {
+                let col = cols[c];
+                let sortClass = col.sortable ? 'sortable' : '';
+                html += '<th class="' + sortClass + '"';
+                if (col.sortable) {
+                    html += ' data-col="' + col.key + '"';
+                }
+                html += '>';
+                html += this._esc(col.label);
+                if (col.sortable) {
+                    let isActive = this._sortState.col === col.key;
+                    let arrow = '';
+                    if (isActive) {
+                        arrow = this._sortState.dir === 'asc' ? ' ▲' : ' ▼';
+                    }
+                    html += '<span class="sort-icon' + (isActive ? ' active' : '') + '">' + arrow + '</span>';
+                }
+                html += '</th>';
+            }
+
             html += '</tr></thead><tbody>';
 
-            for (var i = 0; i < proprietarios.length; i++) {
-                var p = proprietarios[i];
-                var cidadeUf = (p.municipio || '') + (p.UF ? '/' + p.UF : '');
-                var situacaoClass = (p.situacaoCadastral || '').toLowerCase();
+            for (let i = 0; i < proprietarios.length; i++) {
+                let p = proprietarios[i];
+                let cidadeUf = (p.municipio || '') + (p.UF ? '/' + p.UF : '');
+                let situacaoClass = (p.situacaoCadastral || '').toLowerCase();
 
                 html += '<tr>';
                 html += '<td data-label="ID">' + (p.idProprietario || '-') + '</td>';
                 html += '<td data-label="Razão Social" class="razao-cell">' + this._esc(p.razaoSocial || '-') + '</td>';
-                html += '<td data-label="CNPJ">' + this._esc(p.cnpjProprietario || '-') + '</td>';
+                html += '<td data-label="CNPJ">' + this._esc(Validation.formatarCNPJ(p.cnpjProprietario)) + '</td>';
                 html += '<td data-label="Município/UF">' + this._esc(cidadeUf) + '</td>';
                 html += '<td data-label="Situação"><span class="status-badge ' + situacaoClass + '">' + this._esc(p.situacaoCadastral || '-') + '</span></td>';
                 html += '<td data-label="Ações">';
-                html += '<button class="btn-icon btn-edit" data-id="' + p.idProprietario + '" title="Editar"><i class="bx bx-edit"></i></button> ';
-                html += '<button class="btn-icon btn-delete" data-id="' + p.idProprietario + '" data-nome="' + this._esc(p.razaoSocial || '') + '" title="Excluir"><i class="bx bx-trash"></i></button>';
+                html += '<button class="btn-icon btn-edit" data-id="' + p.idProprietario + '" title="Editar" aria-label="Editar proprietário ID ' + p.idProprietario + '" tabindex="0"><i class="bx bx-edit"></i></button> ';
+                html += '<button class="btn-icon btn-delete" data-id="' + p.idProprietario + '" data-nome="' + this._esc(p.razaoSocial || '') + '" title="Excluir" aria-label="Excluir proprietário ID ' + p.idProprietario + '" tabindex="0"><i class="bx bx-trash"></i></button>';
                 html += '</td>';
                 html += '</tr>';
             }
@@ -285,35 +801,70 @@
             html += '</tbody></table></div>';
             container.innerHTML = html;
 
-            // Bind events
-            container.querySelectorAll('.btn-edit').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    Proprietario.edit(parseInt(btn.dataset.id));
+            // Bind edit/delete
+            container.querySelectorAll('.btn-edit').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    let id = parseInt(btn.dataset.id);
+                    this._highlightRow(id);
+                    this.edit(id);
                 });
             });
 
-            container.querySelectorAll('.btn-delete').forEach(function (btn) {
-                btn.addEventListener('click', function () {
-                    Proprietario.confirmDelete(parseInt(btn.dataset.id), btn.dataset.nome);
+            container.querySelectorAll('.btn-delete').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    this.confirmDelete(parseInt(btn.dataset.id), btn.dataset.nome);
                 });
             });
 
-            this._bindSearch();
+            // Bind sort
+            container.querySelectorAll('th.sortable').forEach((th) => {
+                th.addEventListener('click', () => {
+                    let col = th.dataset.col;
+                    if (this._sortState.col === col) {
+                        this._sortState.dir = this._sortState.dir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        this._sortState.col = col;
+                        this._sortState.dir = 'asc';
+                    }
+                    this._sortTable();
+                });
+            });
         },
 
-        _bindSearch() {
-            const searchInput = document.getElementById('proprietarioSearch');
-            if (!searchInput) return;
+        _sortTable() {
+            let col = this._sortState.col;
+            let dir = this._sortState.dir;
 
-            searchInput.addEventListener('input', function () {
-                var filter = this.value.toLowerCase().trim();
-                var rows = document.querySelectorAll('.proprietario-table tbody tr');
-
-                for (var i = 0; i < rows.length; i++) {
-                    var text = rows[i].textContent.toLowerCase();
-                    rows[i].style.display = text.indexOf(filter) !== -1 ? '' : 'none';
+            let sorted = [...this._allProprietarios].sort((a, b) => {
+                let va = String(a[col] || '').toLowerCase();
+                let vb = String(b[col] || '').toLowerCase();
+                if (col === 'idProprietario') {
+                    va = Number(a[col]) || 0;
+                    vb = Number(b[col]) || 0;
                 }
+                if (va < vb) return dir === 'asc' ? -1 : 1;
+                if (va > vb) return dir === 'asc' ? 1 : -1;
+                return 0;
             });
+
+            this._allProprietarios = sorted;
+            this._applyFilters();
+        },
+
+        _highlightRow(id) {
+            // Remove previous highlight
+            document.querySelectorAll('.proprietario-table tbody tr.highlight').forEach((el) => {
+                el.classList.remove('highlight');
+            });
+            // Highlight the row with matching data-id
+            let rows = document.querySelectorAll('.proprietario-table tbody tr');
+            for (let i = 0; i < rows.length; i++) {
+                let btn = rows[i].querySelector('.btn-edit');
+                if (btn && parseInt(btn.dataset.id) === id) {
+                    rows[i].classList.add('highlight');
+                    break;
+                }
+            }
         },
 
         edit(id) {
@@ -337,7 +888,7 @@
         },
 
         confirmDelete(id, nome) {
-            var msg = nome
+            let msg = nome
                 ? 'Excluir "' + nome + '" (ID ' + id + ')?'
                 : 'Excluir proprietário ID ' + id + '?';
 
@@ -363,77 +914,174 @@
             }
         },
 
+        _preValidate(dados) {
+            if (!dados.razaoSocial || !dados.cnpjProprietario) {
+                Message.show('Razão Social e CNPJ são obrigatórios.', 'error');
+                return false;
+            }
+
+            if (!Validation.validarCNPJ(dados.cnpjProprietario)) {
+                Message.show('CNPJ inválido. Verifique os dígitos.', 'error');
+                let cnpjInput = document.getElementById('cnpjProprietario');
+                if (cnpjInput) { cnpjInput.focus(); cnpjInput.select(); }
+                return false;
+            }
+
+            if (dados.CEP && !Validation.validarCEP(dados.CEP)) {
+                Message.show('CEP inválido. Deve ter 8 dígitos.', 'error');
+                let cepInput = document.getElementById('CEP');
+                if (cepInput) { cepInput.focus(); cepInput.select(); }
+                return false;
+            }
+
+            if (dados.telefone && !Validation.validarTelefone(dados.telefone)) {
+                Message.show('Telefone inválido. Deve ter 10 ou 11 dígitos.', 'error');
+                let telInput = document.getElementById('telefone');
+                if (telInput) { telInput.focus(); telInput.select(); }
+                return false;
+            }
+
+            return true;
+        },
+
         save(event) {
             event.preventDefault();
 
-            var dados = this._getFormData();
-            if (!dados.razaoSocial || !dados.cnpjProprietario) {
-                Message.show('Razão Social e CNPJ são obrigatórios.', 'error');
-                return;
-            }
+            let dados = this._getFormData();
+            if (!this._preValidate(dados)) return;
 
-            var btn = document.getElementById('btnSalvarProprietario');
+            let btn = document.getElementById('btnSalvarProprietario');
             btn.disabled = true;
-            btn.textContent = 'Salvando...';
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Salvando...';
             Loading.show();
 
-            var editId = parseInt(document.getElementById('editId').value) || null;
-            var self = this;
+            let editId = parseInt(document.getElementById('editId').value) || null;
 
             if (typeof google !== 'undefined' && google.script && google.script.run) {
-                var run = editId
-                    ? google.script.run.withSuccessHandler(function (response) {
-                          btn.disabled = false;
-                          btn.textContent = 'Salvar';
-                          Loading.hide();
-                          if (response.success) {
-                              Message.show(response.message, 'success');
-                              self.showList();
-                              self.loadList();
-                          } else {
-                              Message.show(response.message, 'error');
-                          }
-                      }).atualizarProprietarioEndpoint(self.token, editId, dados)
-                    : google.script.run.withSuccessHandler(function (response) {
-                          btn.disabled = false;
-                          btn.textContent = 'Salvar';
-                          Loading.hide();
-                          if (response.success) {
-                              Message.show(response.message, 'success');
-                              self.showList();
-                              self.loadList();
-                          } else {
-                              Message.show(response.message, 'error');
-                          }
-                      }).inserirProprietarioEndpoint(self.token, dados);
+                let successHandler = (response) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-save"></i> Salvar';
+                    Loading.hide();
+                    if (response.success) {
+                        Message.show(response.message, 'success');
+                        this.showList();
+                        this.loadList();
+                    } else {
+                        Message.show(response.message, 'error');
+                    }
+                };
+
+                let failureHandler = (error) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-save"></i> Salvar';
+                    Loading.hide();
+                    Message.show('Erro ao salvar proprietário.', 'error');
+                    console.error('[save]', error);
+                };
+
+                if (editId) {
+                    google.script.run
+                        .withSuccessHandler(successHandler)
+                        .withFailureHandler(failureHandler)
+                        .atualizarProprietarioEndpoint(this.token, editId, dados);
+                } else {
+                    google.script.run
+                        .withSuccessHandler(successHandler)
+                        .withFailureHandler(failureHandler)
+                        .inserirProprietarioEndpoint(this.token, dados);
+                }
             }
         },
 
+        exportCSV() {
+            let searchInput = document.getElementById('proprietarioSearch');
+            let search = searchInput ? searchInput.value.trim() : '';
+
+            Loading.show();
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        Loading.hide();
+                        if (response.success) {
+                            let blob = new Blob(['\uFEFF' + response.csv], { type: 'text/csv;charset=utf-8;' });
+                            let url = URL.createObjectURL(blob);
+                            let a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'proprietarios.csv';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                        } else {
+                            Message.show(response.message || 'Erro ao exportar CSV.', 'error');
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        Loading.hide();
+                        Message.show('Erro ao exportar CSV.', 'error');
+                        console.error('[exportCSV]', error);
+                    })
+                    .exportarProprietariosCSVEndpoint(this.token, search);
+            }
+        },
+
+        exportPDF() {
+            let rows = document.querySelectorAll('.proprietario-table tbody tr');
+            if (!rows || rows.length === 0) {
+                Message.show('Nenhum dado para exportar.', 'error');
+                return;
+            }
+
+            let visibleRows = [];
+            for (let i = 0; i < rows.length; i++) {
+                if (rows[i].style.display !== 'none') {
+                    visibleRows.push(rows[i]);
+                }
+            }
+
+            if (visibleRows.length === 0) {
+                Message.show('Nenhum dado visível para exportar.', 'error');
+                return;
+            }
+
+            let tableClone = document.querySelector('.proprietario-table').cloneNode(true);
+            let tbodyClone = tableClone.querySelector('tbody');
+            if (tbodyClone) {
+                tbodyClone.innerHTML = '';
+                for (let j = 0; j < visibleRows.length; j++) {
+                    tbodyClone.appendChild(visibleRows[j].cloneNode(true));
+                }
+            }
+
+            let win = window.open('', '_blank');
+            if (!win) {
+                Message.show('Pop-up bloqueado. Permita pop-ups para exportar PDF.', 'error');
+                return;
+            }
+
+            win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8">');
+            win.document.write('<title>Proprietarios</title>');
+            win.document.write('<style>');
+            win.document.write('body { font-family: Arial, sans-serif; font-size: 12px; padding: 20px; }');
+            win.document.write('h2 { text-align: center; margin-bottom: 20px; }');
+            win.document.write('table { width: 100%; border-collapse: collapse; }');
+            win.document.write('th, td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; }');
+            win.document.write('th { background: #f0f0f0; font-weight: bold; }');
+            win.document.write('@media print { .no-print { display: none; } }');
+            win.document.write('</style>');
+            win.document.write('</head><body>');
+            win.document.write('<h2>Relatório de Proprietários</h2>');
+            win.document.write(tableClone.outerHTML);
+            win.document.write('</body></html>');
+            win.document.close();
+
+            setTimeout(() => { win.print(); }, 500);
+        },
+
         _esc(text) {
-            var div = document.createElement('div');
+            let div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         },
     };
-
-    // Bind form and buttons after DOM ready
-    document.addEventListener('DOMContentLoaded', function () {
-        var form = document.getElementById('proprietarioForm');
-        if (form) {
-            form.addEventListener('submit', function (e) { Proprietario.save(e); });
-        }
-
-        var btnNovo = document.getElementById('btnNovoProprietario');
-        if (btnNovo) {
-            btnNovo.addEventListener('click', function () { Proprietario.showForm(null, null); });
-        }
-
-        var btnCancelar = document.getElementById('btnCancelarProprietario');
-        if (btnCancelar) {
-            btnCancelar.addEventListener('click', function () {
-                Proprietario.showList();
-                Proprietario.loadList();
-            });
-        }
-    });
 </script>
