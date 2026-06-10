@@ -1582,4 +1582,382 @@
     .form-group select.cnpj-filled {
         animation: cnpjFilled 2s ease-out;
     }
+
+    /* === Modal de Reconciliação com a Receita === */
+    .reconciliacao-overlay {
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2000;
+        padding: 16px;
+    }
+
+    .reconciliacao-modal {
+        background: var(--white);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        overflow: hidden;
+    }
+
+    .reconciliacao-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 20px 24px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+    .reconciliacao-header h3 {
+        margin: 0;
+        font-size: 18px;
+        color: var(--text-color);
+    }
+
+    .reconciliacao-close {
+        background: none;
+        border: none;
+        font-size: 28px;
+        color: #999;
+        cursor: pointer;
+        padding: 0;
+        line-height: 1;
+    }
+
+    .reconciliacao-close:hover {
+        color: var(--text-color);
+    }
+
+    .reconciliacao-body {
+        padding: 20px 24px;
+        overflow-y: auto;
+        flex: 1;
+    }
+
+    .reconciliacao-subtitle {
+        margin: 0 0 16px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .reconciliacao-tabela-wrapper {
+        overflow-x: auto;
+    }
+
+    .reconciliacao-tabela {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+    .reconciliacao-tabela th {
+        background: #f8f9fa;
+        padding: 10px 12px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--text-color);
+        border-bottom: 2px solid #e0e0e0;
+        white-space: nowrap;
+    }
+
+    .reconciliacao-tabela td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #eee;
+        vertical-align: middle;
+    }
+
+    .reconciliacao-tabela .col-check {
+        width: 40px;
+        text-align: center;
+    }
+
+    .reconciliacao-tabela .col-campo {
+        font-weight: 500;
+        white-space: nowrap;
+    }
+
+    .reconciliacao-tabela .col-atual,
+    .reconciliacao-tabela .col-api {
+        max-width: 220px;
+        word-break: break-word;
+    }
+
+    .reconciliacao-tabela .col-atual {
+        color: #dc3545;
+    }
+
+    .reconciliacao-tabela .col-api {
+        color: #28a745;
+    }
+
+    .reconciliacao-divergente {
+        background: #fff8f8;
+    }
+
+    .reconciliacao-divergente:hover {
+        background: #fff0f0;
+    }
+
+    .reconciliacao-sem-divergencias {
+        text-align: center;
+        padding: 40px 20px;
+        color: #666;
+    }
+
+    .reconciliacao-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 16px 24px;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    @media (max-width: 600px) {
+        .reconciliacao-modal {
+            width: 100%;
+            max-height: 100vh;
+            border-radius: 0;
+        }
+
+        .reconciliacao-tabela .col-atual,
+        .reconciliacao-tabela .col-api {
+            max-width: 120px;
+            font-size: 12px;
+        }
+    }
+
+    /* ============== ESCOPO ============== */
+
+    .escopo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .escopo-header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .escopo-header-left h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .escopo-table td[data-label="Código"] {
+        font-weight: 600;
+        color: var(--primary-color);
+    }
+
+    /* Modal de Escopo */
+    .modal-escopo-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1500;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 16px;
+    }
+
+    .modal-escopo {
+        background: var(--white);
+        border-radius: 12px;
+        padding: 24px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .modal-escopo h3 {
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--text-color);
+    }
+
+    .modal-escopo .form-group {
+        margin-bottom: 16px;
+    }
+
+    .modal-escopo .form-group label {
+        display: block;
+        margin-bottom: 4px;
+        font-weight: 500;
+        font-size: 14px;
+        color: var(--text-color);
+    }
+
+    .modal-escopo .form-group select,
+    .modal-escopo .form-group input {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1.5px solid #d0d0d0;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+        background: var(--white);
+        box-sizing: border-box;
+    }
+
+    .modal-escopo .form-group select:focus,
+    .modal-escopo .form-group input:focus {
+        border-color: var(--primary-color);
+    }
+
+    .modal-escopo .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+    }
+
+    /* Campos dinâmicos (BALANÇA) */
+    .campo-dinamico {
+        display: none;
+        background: #f8f9ff;
+        border: 1px solid #dde3f5;
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 16px;
+    }
+
+    .campo-dinamico-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--primary-color);
+        margin-bottom: 12px;
+    }
+
+    .campo-dinamico .form-group {
+        margin-bottom: 12px;
+    }
+
+    .campo-dinamico .form-group:last-child {
+        margin-bottom: 0;
+    }
+
+    .btn-classe-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+    }
+
+    .btn-classe {
+        padding: 5px 12px;
+        border: 1.5px solid #dde3f5;
+        border-radius: 6px;
+        background: var(--white);
+        color: var(--primary-color);
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .btn-classe:hover {
+        background: #e8edff;
+        border-color: var(--primary-color);
+    }
+
+    .btn-classe-limpar {
+        color: #e74c3c;
+        border-color: #f5c6cb;
+    }
+
+    .btn-classe-limpar:hover {
+        background: #fff0f0;
+        border-color: #e74c3c;
+    }
+
+    .campo-dinamico input[readonly] {
+        background: #f0f0f0;
+        color: #555;
+        cursor: default;
+    }
+
+    /* Botão Escopos na tabela de proprietários */
+    .btn-escopo {
+        color: var(--primary-color);
+    }
+
+    .btn-escopo:hover {
+        background: #e8edff;
+    }
+
+    /* Responsivo: escopo table vira card */
+    @media (max-width: 768px) {
+        .escopo-table thead {
+            display: none;
+        }
+
+        .escopo-table tr {
+            display: block;
+            margin-bottom: 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 12px;
+            background: var(--white);
+        }
+
+        .escopo-table td {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border: none;
+            text-align: right;
+        }
+
+        .escopo-table td::before {
+            content: attr(data-label);
+            font-weight: 600;
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .escopo-table td[data-label="Ações"] {
+            justify-content: flex-end;
+            gap: 8px;
+        }
+
+        .escopo-table td[data-label="Ações"]::before {
+            display: none;
+        }
+
+        .escopo-header {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .escopo-header-left {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .modal-escopo {
+            width: 100%;
+            max-height: 100vh;
+            border-radius: 0;
+        }
+    }
 </style>

@@ -68,6 +68,9 @@
                             <button type="button" id="btnConsultarCNPJ" class="btn-consultar-cnpj" title="Consultar CNPJ">
                                 <i class="bx bx-search"></i>
                             </button>
+                            <button type="button" id="btnConferirReceita" class="btn-consultar-cnpj" title="Conferir dados com a Receita Federal">
+                                <i class="bx bx-check-shield"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -266,6 +269,20 @@
                 </div>
             </fieldset>
 
+            <!-- Seção de Escopos (visível apenas ao editar) -->
+            <div id="escopoSection" class="escopo-section" style="display: none;">
+                <div class="escopo-section-header">
+                    <h3><i class="bx bx-list-ul"></i> Escopos de Serviço</h3>
+                    <button type="button" class="btn-primary btn-sm" id="btnNovoEscopo">
+                        <i class="bx bx-plus"></i> Novo Escopo
+                    </button>
+                </div>
+                <p class="escopo-subtitle" id="escopoSubtitle">Gerencie os escopos de serviço deste proprietário.</p>
+                <div id="escopoTableContainer">
+                    <div class="admin-empty">Nenhum escopo cadastrado.</div>
+                </div>
+            </div>
+
             <div class="form-actions full-width">
                 <button type="submit" class="btn-primary" id="btnSalvarProprietario">
                     <i class="bx bx-save"></i> Salvar
@@ -275,6 +292,58 @@
                 </button>
             </div>
         </form>
+
+        <!-- Modal Escopo -->
+        <div id="modalEscopoOverlay" class="modal-escopo-overlay" style="display: none;">
+            <div class="modal-escopo">
+                <h3 id="modalEscopoTitulo"><i class="bx bx-file"></i> Novo Escopo</h3>
+                <div id="escopoFormContainer">
+                    <input type="hidden" id="escopoEditId" value="">
+
+                    <div class="form-group">
+                        <label for="selectInstrumento">Instrumento <span class="required-star">*</span></label>
+                        <select id="selectInstrumento" required>
+                            <option value="">Selecione um instrumento...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="codigoEscopoInput">Código Escopo <span class="required-star">*</span></label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-barcode input-icon"></i>
+                            <input type="text" id="codigoEscopoInput" required placeholder="Ex: BAL-001, ESF-001">
+                        </div>
+                    </div>
+
+                    <div id="camposBalanca" class="campo-dinamico">
+                        <p class="campo-dinamico-label"><i class="bx bx-info-circle"></i> Campos para BALANÇA</p>
+                        <div class="form-group">
+                            <label for="cargaValor">Carga Máxima (kg) <span class="required-star">*</span></label>
+                            <input type="text" id="cargaValor" placeholder="Ex: 300">
+                        </div>
+                        <div class="form-group">
+                            <label for="classeExatidao">Classe de Exatidão <span class="required-star">*</span></label>
+                            <input type="text" id="classeExatidao" readonly placeholder="Clique em um botão abaixo para gerar...">
+                            <div class="btn-classe-group">
+                                <button type="button" class="btn-classe" data-classe="classe3e4">Classe III e IIII</button>
+                                <button type="button" class="btn-classe" data-classe="classe1e2">Classe I e II</button>
+                                <button type="button" class="btn-classe" data-classe="classe2">Classe II</button>
+                                <button type="button" class="btn-classe btn-classe-limpar" data-classe="limpar">Limpar</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="button" class="btn-primary" id="btnSalvarEscopo">
+                            <i class="bx bx-save"></i> Salvar
+                        </button>
+                        <button type="button" class="btn-secondary" id="btnCancelarEscopo">
+                            <i class="bx bx-x"></i> Cancelar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -345,6 +414,11 @@
             let btnRegional = document.getElementById('btnBuscarRegional');
             if (btnRegional) {
                 btnRegional.addEventListener('click', () => this.buscarRegional());
+            }
+
+            let btnConferir = document.getElementById('btnConferirReceita');
+            if (btnConferir) {
+                btnConferir.addEventListener('click', () => this.conferirReceita());
             }
 
             document.addEventListener('keydown', (e) => {
@@ -607,6 +681,19 @@
                     }
                 });
             }
+
+            // SGI obrigatórios
+            ['proprietario', 'regional', 'sigla', 'codigoMunicipio'].forEach((id) => {
+                let el = document.getElementById(id);
+                if (!el) return;
+                el.addEventListener('blur', () => {
+                    if (!el.value.trim()) {
+                        this._showFieldError(el, 'Campo obrigatório');
+                    } else {
+                        this._clearFieldError(el);
+                    }
+                });
+            });
         },
 
         _bindSearch() {
@@ -685,6 +772,19 @@
                 document.getElementById('proprietarioForm').reset();
                 document.getElementById('editId').value = '';
                 this._clearValidationIcons();
+            }
+
+            // Mostra ou esconde a seção de escopos
+            const escopoSection = document.getElementById('escopoSection');
+            if (escopoSection) {
+                if (editId) {
+                    escopoSection.style.display = 'block';
+                    if (typeof Escopo !== 'undefined') {
+                        Escopo.init(this.token, editId);
+                    }
+                } else {
+                    escopoSection.style.display = 'none';
+                }
             }
 
             this._snapshotFormData();
@@ -1036,8 +1136,24 @@
                 return false;
             }
 
-            if (!dados.proprietario || !dados.regional || !dados.sigla || !dados.codigoMunicipio) {
+            let sgiFields = [
+                { id: 'proprietario', label: 'Nº Proprietário' },
+                { id: 'regional', label: 'Regional' },
+                { id: 'sigla', label: 'Sigla' },
+                { id: 'codigoMunicipio', label: 'Cód. Município' },
+            ];
+            let emptySgi = [];
+            for (let f of sgiFields) {
+                let el = document.getElementById(f.id);
+                if (!el || !el.value.trim()) {
+                    emptySgi.push(f);
+                    if (el) this._showFieldError(el, 'Campo obrigatório');
+                }
+            }
+            if (emptySgi.length > 0) {
                 Message.show('Preencha todos os campos obrigatórios de Dados do SGI.', 'error');
+                let first = document.getElementById(emptySgi[0].id);
+                if (first) first.focus();
                 return false;
             }
 
@@ -1288,6 +1404,24 @@
                 .consultarMunicipioEndpoint(this.token, municipio);
         },
 
+        conferirReceita() {
+            let cnpjInput = document.getElementById('cnpjProprietario');
+            if (!cnpjInput) return;
+
+            let cnpj = cnpjInput.value.replace(/\D/g, '');
+            if (cnpj.length !== 14) {
+                Message.show('Informe um CNPJ valido com 14 digitos para conferir.', 'error');
+                return;
+            }
+
+            if (!Validation.validarCNPJ(cnpj)) {
+                Message.show('CNPJ invalido. Verifique os digitos verificadores.', 'error');
+                return;
+            }
+
+            Reconciliacao.init(this.token, cnpj);
+        },
+
         _highlightFilledFields() {
             let fields = [
                 'razaoSocial', 'logradouro', 'numero', 'complemento',
@@ -1302,6 +1436,406 @@
                     setTimeout(() => el.classList.remove('cnpj-filled'), 2000);
                 }
             });
+        },
+
+        _esc(text) {
+            let div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+    };
+
+    // ============== Escopo ==============
+    var Escopo = {
+        token: null,
+        idProprietario: null,
+        _instrumentos: [],
+        _instrumentoMap: {},
+        _escopos: [],
+
+        init(token, idProprietario) {
+            this.token = token;
+            this.idProprietario = idProprietario;
+            this._instrumentos = [];
+            this._instrumentoMap = {};
+            this._escopos = [];
+            this.bindEvents();
+            this.loadInstrumentos();
+        },
+
+        bindEvents() {
+            const btnNovo = document.getElementById('btnNovoEscopo');
+            if (btnNovo) {
+                btnNovo.addEventListener('click', () => this.showModal(null));
+            }
+
+            const btnSalvar = document.getElementById('btnSalvarEscopo');
+            if (btnSalvar) {
+                btnSalvar.addEventListener('click', (e) => this.save(e));
+            }
+
+            const btnCancelar = document.getElementById('btnCancelarEscopo');
+            if (btnCancelar) {
+                btnCancelar.addEventListener('click', () => this.hideModal());
+            }
+
+            const selectInst = document.getElementById('selectInstrumento');
+            if (selectInst) {
+                selectInst.addEventListener('change', () => this._onInstrumentoChange());
+            }
+
+            const overlay = document.getElementById('modalEscopoOverlay');
+            if (overlay) {
+                overlay.addEventListener('click', (e) => {
+                    if (e.target === overlay) this.hideModal();
+                });
+            }
+
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') this.hideModal();
+            });
+
+            // Botões de classe da BALANÇA
+            document.querySelectorAll('.btn-classe').forEach((btn) => {
+                btn.addEventListener('click', (e) => {
+                    const classe = btn.dataset.classe;
+                    if (classe === 'limpar') {
+                        this._limparClasse(e);
+                    } else {
+                        this._adicionarClasse(e, classe);
+                    }
+                });
+            });
+        },
+
+        loadInstrumentos() {
+            const container = document.getElementById('escopoTableContainer');
+            if (!container) return;
+            container.innerHTML = '<div class="admin-empty placeholder-load"><i class="bx bx-loader-alt bx-spin" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i><p>Carregando instrumentos...</p></div>';
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((data) => {
+                        if (data && data.error) {
+                            container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
+                            return;
+                        }
+                        this._instrumentos = data || [];
+                        this._instrumentoMap = {};
+                        for (let i = 0; i < this._instrumentos.length; i++) {
+                            this._instrumentoMap[this._instrumentos[i].id] = this._instrumentos[i].nome;
+                        }
+                        this._populateSelect();
+                        this.loadEscopos();
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('[Escopo] Erro ao carregar instrumentos:', error);
+                        container.innerHTML = '<div class="admin-empty">Erro ao carregar instrumentos.</div>';
+                        Message.show('Erro ao carregar instrumentos.', 'error');
+                    })
+                    .listarInstrumentosEndpoint(this.token);
+            }
+        },
+
+        _populateSelect() {
+            const select = document.getElementById('selectInstrumento');
+            if (!select) return;
+            select.innerHTML = '<option value="">Selecione um instrumento...</option>';
+            for (let i = 0; i < this._instrumentos.length; i++) {
+                const opt = document.createElement('option');
+                opt.value = this._instrumentos[i].id;
+                opt.textContent = this._instrumentos[i].nome + (this._instrumentos[i].codPreco ? ' (Cod: ' + this._instrumentos[i].codPreco + ')' : '');
+                select.appendChild(opt);
+            }
+        },
+
+        loadEscopos() {
+            const container = document.getElementById('escopoTableContainer');
+            if (!container) return;
+            container.innerHTML = '<div class="admin-empty placeholder-load"><i class="bx bx-loader-alt bx-spin" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i><p>Carregando escopos...</p></div>';
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((data) => {
+                        if (data && data.error) {
+                            container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
+                            return;
+                        }
+                        this._escopos = data || [];
+                        this.renderTable();
+                    })
+                    .withFailureHandler((error) => {
+                        console.error('[Escopo] Erro ao carregar escopos:', error);
+                        container.innerHTML = '<div class="admin-empty">Erro ao carregar escopos.</div>';
+                        Message.show('Erro ao carregar escopos.', 'error');
+                    })
+                    .listarEscoposPorProprietarioEndpoint(this.token, this.idProprietario);
+            }
+        },
+
+        renderTable() {
+            const container = document.getElementById('escopoTableContainer');
+            if (!container) return;
+
+            if (!this._escopos || this._escopos.length === 0) {
+                container.innerHTML = '<div class="admin-empty">Nenhum escopo cadastrado para este proprietário.</div>';
+                return;
+            }
+
+            let html = '<div class="table-responsive">';
+            html += '<table class="admin-table escopo-table" role="table">';
+            html += '<thead><tr>';
+            html += '<th>Código Escopo</th>';
+            html += '<th>Instrumento</th>';
+            html += '<th>Carga Máx</th>';
+            html += '<th>Classe de Exatidão</th>';
+            html += '<th>Ações</th>';
+            html += '</tr></thead><tbody>';
+
+            for (let i = 0; i < this._escopos.length; i++) {
+                let e = this._escopos[i];
+                let de = e.dadosExtras || {};
+                let carga = de.cargaMaxima || '-';
+                let classe = de.classeExatidao || '-';
+                let nomeInst = this._instrumentoMap[e.codigoInstrumento] || e.nomeInstrumento || 'Desconhecido';
+
+                html += '<tr>';
+                html += '<td data-label="Código">' + this._esc(e.codigoEscopo) + '</td>';
+                html += '<td data-label="Instrumento">' + this._esc(nomeInst) + '</td>';
+                html += '<td data-label="Carga Máx">' + this._esc(carga) + '</td>';
+                html += '<td data-label="Classe">' + this._esc(classe) + '</td>';
+                html += '<td data-label="Ações">';
+                html += '<button class="btn-icon btn-edit" data-id="' + e.idEscopo + '" title="Editar" aria-label="Editar escopo"><i class="bx bx-edit"></i></button> ';
+                html += '<button class="btn-icon btn-delete" data-id="' + e.idEscopo + '" data-codigo="' + this._esc(e.codigoEscopo) + '" title="Excluir" aria-label="Excluir escopo"><i class="bx bx-trash"></i></button>';
+                html += '</td>';
+                html += '</tr>';
+            }
+
+            html += '</tbody></table></div>';
+            container.innerHTML = html;
+
+            container.querySelectorAll('.btn-edit').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    let id = parseInt(btn.dataset.id);
+                    this.edit(id);
+                });
+            });
+
+            container.querySelectorAll('.btn-delete').forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    this.confirmDelete(parseInt(btn.dataset.id), btn.dataset.codigo);
+                });
+            });
+        },
+
+        showModal(data) {
+            this._isEditingEscopo = data ? true : false;
+            const editId = data ? data.idEscopo : null;
+            const overlay = document.getElementById('modalEscopoOverlay');
+            const titulo = document.getElementById('modalEscopoTitulo');
+            const editHidden = document.getElementById('escopoEditId');
+            const select = document.getElementById('selectInstrumento');
+            const codigoInput = document.getElementById('codigoEscopoInput');
+
+            if (titulo) {
+                titulo.innerHTML = editId ? '<i class="bx bx-edit"></i> Editar Escopo' : '<i class="bx bx-file"></i> Novo Escopo';
+            }
+            if (editHidden) editHidden.value = editId || '';
+            if (select) select.value = data ? (data.codigoInstrumento || '') : '';
+            if (codigoInput) codigoInput.value = data ? (data.codigoEscopo || '') : '';
+
+            this._setDadosExtras(data ? (data.dadosExtras || {}) : {});
+            this._onInstrumentoChange();
+
+            if (overlay) overlay.style.display = 'flex';
+        },
+
+        hideModal() {
+            const overlay = document.getElementById('modalEscopoOverlay');
+            if (overlay) overlay.style.display = 'none';
+        },
+
+        _onInstrumentoChange() {
+            const select = document.getElementById('selectInstrumento');
+            const camposBalanca = document.getElementById('camposBalanca');
+            const codigoInput = document.getElementById('codigoEscopoInput');
+            if (!select || !camposBalanca || !codigoInput) return;
+
+            const selectedId = parseInt(select.value);
+            const nomeInst = this._instrumentoMap[selectedId] || '';
+
+            // Auto-preenche código do escopo com codPreco (apenas em criação)
+            if (!this._isEditingEscopo) {
+                const instrumento = this._instrumentos.find(i => i.id === selectedId);
+                if (instrumento && instrumento.codPreco) {
+                    codigoInput.value = String(instrumento.codPreco);
+                } else {
+                    codigoInput.value = '';
+                }
+            }
+
+            if (nomeInst.toUpperCase() === 'BALANCA') {
+                camposBalanca.style.display = 'block';
+            } else {
+                camposBalanca.style.display = 'none';
+                document.getElementById('cargaValor').value = '';
+                document.getElementById('classeExatidao').value = '';
+            }
+        },
+
+        _getDadosExtras() {
+            const select = document.getElementById('selectInstrumento');
+            const selectedId = parseInt(select.value);
+            const nomeInst = this._instrumentoMap[selectedId] || '';
+
+            if (nomeInst.toUpperCase() === 'BALANCA') {
+                return JSON.stringify({
+                    cargaValor: document.getElementById('cargaValor').value.trim(),
+                    classeExatidao: document.getElementById('classeExatidao').value.trim(),
+                });
+            }
+            return '{}';
+        },
+
+        _limparClasse(event) {
+            event.preventDefault();
+            document.getElementById('cargaValor').value = '';
+            document.getElementById('classeExatidao').value = '';
+        },
+
+        _adicionarClasse(event, tipo) {
+            event.preventDefault();
+
+            var cargaValor = document.getElementById('cargaValor').value.trim();
+            if (!cargaValor) {
+                Message.show('Informe o valor da carga primeiro.', 'error');
+                document.getElementById('cargaValor').focus();
+                return;
+            }
+
+            var classeText = document.getElementById('classeExatidao').value;
+            var valorFormatado = cargaValor.replace('.', ',');
+
+            var textoClasse = '';
+            if (tipo === 'classe3e4') {
+                textoClasse = 'CLASSE III E IIII ATE ' + valorFormatado + ' kg';
+            } else if (tipo === 'classe1e2') {
+                textoClasse = 'CLASSE I E II ATE ' + valorFormatado + ' kg';
+            } else if (tipo === 'classe2') {
+                textoClasse = 'CLASSE II ATE ' + valorFormatado + ' kg';
+            }
+
+            if (!classeText || classeText.trim() === '') {
+                document.getElementById('classeExatidao').value = textoClasse;
+            } else {
+                document.getElementById('classeExatidao').value = classeText + ', ' + textoClasse;
+            }
+        },
+
+        _setDadosExtras(dadosExtras) {
+            const de = dadosExtras || {};
+            document.getElementById('cargaValor').value = de.cargaValor || '';
+            document.getElementById('classeExatidao').value = de.classeExatidao || '';
+        },
+
+        save(event) {
+            event.preventDefault();
+
+            const select = document.getElementById('selectInstrumento');
+            const codigoInput = document.getElementById('codigoEscopoInput');
+
+            if (!select.value) {
+                Message.show('Selecione um instrumento.', 'error');
+                select.focus();
+                return;
+            }
+            if (!codigoInput.value.trim()) {
+                Message.show('Informe o código do escopo.', 'error');
+                codigoInput.focus();
+                return;
+            }
+
+            let dadosExtrasStr = this._getDadosExtras();
+            let codigoInstrumento = parseInt(select.value);
+            let codigoEscopo = codigoInput.value.trim();
+            let editId = parseInt(document.getElementById('escopoEditId').value) || null;
+
+            const btn = document.getElementById('btnSalvarEscopo');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Salvando...';
+            Loading.show();
+
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                const successHandler = (response) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-save"></i> Salvar';
+                    Loading.hide();
+                    if (response.success) {
+                        Message.show(response.message, 'success');
+                        this.hideModal();
+                        this.loadEscopos();
+                    } else {
+                        Message.show(response.message, 'error');
+                    }
+                };
+
+                const failureHandler = (error) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-save"></i> Salvar';
+                    Loading.hide();
+                    Message.show('Erro ao salvar escopo.', 'error');
+                    console.error('[Escopo.save]', error);
+                };
+
+                if (editId) {
+                    google.script.run
+                        .withSuccessHandler(successHandler)
+                        .withFailureHandler(failureHandler)
+                        .atualizarEscopoEndpoint(this.token, editId, codigoEscopo, codigoInstrumento, dadosExtrasStr);
+                } else {
+                    google.script.run
+                        .withSuccessHandler(successHandler)
+                        .withFailureHandler(failureHandler)
+                        .inserirEscopoEndpoint(this.token, this.idProprietario, codigoEscopo, codigoInstrumento, dadosExtrasStr);
+                }
+            }
+        },
+
+        edit(id) {
+            const escopo = this._escopos.find(e => e.idEscopo === id);
+            if (escopo) {
+                this.showModal(escopo);
+            } else {
+                Message.show('Escopo não encontrado.', 'error');
+            }
+        },
+
+        confirmDelete(id, codigo) {
+            let msg = codigo
+                ? 'Excluir escopo "' + codigo + '" (ID ' + id + ')?'
+                : 'Excluir escopo ID ' + id + '?';
+
+            if (!confirm(msg)) return;
+
+            Loading.show();
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+                google.script.run
+                    .withSuccessHandler((response) => {
+                        Loading.hide();
+                        if (response.success) {
+                            Message.show(response.message, 'success');
+                            this.loadEscopos();
+                        } else {
+                            Message.show(response.message, 'error');
+                        }
+                    })
+                    .withFailureHandler((error) => {
+                        Loading.hide();
+                        Message.show('Erro ao excluir escopo.', 'error');
+                        console.error('[Escopo.confirmDelete]', error);
+                    })
+                    .excluirEscopoEndpoint(this.token, id);
+            }
         },
 
         _esc(text) {

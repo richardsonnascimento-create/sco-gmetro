@@ -1,0 +1,275 @@
+<div id="reconciliacaoModal" class="reconciliacao-overlay" style="display:none;" role="dialog" aria-modal="true" aria-labelledby="reconciliacaoTitulo">
+    <div class="reconciliacao-modal">
+        <div class="reconciliacao-header">
+            <h3 id="reconciliacaoTitulo">Conferência com a Receita Federal</h3>
+            <button type="button" class="reconciliacao-close" id="btnReconciliacaoFechar" aria-label="Fechar">&times;</button>
+        </div>
+        <div class="reconciliacao-body">
+            <p class="reconciliacao-subtitle" id="reconciliacaoSubtitle"></p>
+            <div class="reconciliacao-tabela-wrapper">
+                <table class="reconciliacao-tabela" id="reconciliacaoTabela">
+                    <thead>
+                        <tr>
+                            <th class="col-check">
+                                <input type="checkbox" id="reconciliacaoCheckAll" checked aria-label="Marcar todos">
+                            </th>
+                            <th class="col-campo">Campo</th>
+                            <th class="col-atual">Valor Atual</th>
+                            <th class="col-api">Valor da Receita</th>
+                        </tr>
+                    </thead>
+                    <tbody id="reconciliacaoTbody"></tbody>
+                </table>
+            </div>
+            <div id="reconciliacaoSemDivergencias" style="display:none;" class="reconciliacao-sem-divergencias">
+                <i class="bx bx-check-circle" style="font-size:48px;color:#28a745;display:block;margin-bottom:12px;"></i>
+                <p>Nenhuma divergência encontrada. Os dados estão atualizados.</p>
+            </div>
+        </div>
+        <div class="reconciliacao-footer">
+            <a href="#" id="btnReconciliacaoSite" class="btn-secondary" target="_blank" rel="noopener" style="margin-right:auto;text-decoration:none;">
+                <i class="bx bx-link-external"></i> Site da Receita
+            </a>
+            <button type="button" class="btn-secondary" id="btnReconciliacaoFecharAcao">Fechar</button>
+            <button type="button" class="btn-primary" id="btnReconciliacaoAtualizar">
+                <i class="bx bx-sync"></i> Atualizar selecionados
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const Reconciliacao = {
+        _token: null,
+        _cnpj: null,
+        _dadosAPI: null,
+        _dadosAtuais: null,
+        _divergencias: [],
+
+        _MAPA_CAMPOS: {
+            razaoSocial: { label: 'Razão Social', id: 'razaoSocial' },
+            logradouro: { label: 'Logradouro', id: 'logradouro' },
+            numero: { label: 'Número', id: 'numero' },
+            complemento: { label: 'Complemento', id: 'complemento' },
+            bairro: { label: 'Bairro', id: 'bairro' },
+            municipio: { label: 'Município', id: 'municipio' },
+            UF: { label: 'UF', id: 'UF' },
+            CEP: { label: 'CEP', id: 'CEP' },
+            telefone: { label: 'Telefone', id: 'telefone' },
+            email: { label: 'E-mail', id: 'email' },
+            situacaoCadastral: { label: 'Situação Cadastral', id: 'situacaoCadastral' },
+            CNAE: { label: 'CNAE', id: 'CNAE' },
+        },
+
+        _normalizar(chave, valor) {
+            if (valor === null || valor === undefined) return '';
+            let fmt = String(valor).trim();
+            if (chave === 'CEP' || chave === 'telefone') {
+                return fmt.replace(/\D/g, '').toLowerCase();
+            }
+            fmt = fmt.replace(/\s+/g, ' ').toLowerCase();
+            if (chave === 'situacaoCadastral') {
+                if (fmt === 'ativa' || fmt === 'ativo') return 'ativo';
+                if (fmt === 'suspensa' || fmt === 'suspenso') return 'suspenso';
+                if (fmt === 'baixada' || fmt === 'inapta' || fmt === 'inativo') return 'inativo';
+                return 'ativo';
+            }
+            return fmt;
+        },
+
+        _formatarParaExibicao(chave, valor) {
+            if (!valor) return '-';
+            if (chave === 'cnpjProprietario' || chave === 'cnpj') {
+                let d = String(valor).replace(/\D/g, '');
+                if (d.length === 14) {
+                    return d.substring(0,2) + '.' + d.substring(2,5) + '.' + d.substring(5,8)
+                        + '/' + d.substring(8,12) + '-' + d.substring(12,14);
+                }
+            }
+            if (chave === 'CEP') {
+                let d = String(valor).replace(/\D/g, '');
+                if (d.length === 8) return d.substring(0,5) + '-' + d.substring(5);
+            }
+            if (chave === 'telefone') {
+                let d = String(valor).replace(/\D/g, '');
+                if (d.length === 10) return '(' + d.substring(0,2) + ') ' + d.substring(2,6) + '-' + d.substring(6);
+                if (d.length === 11) return '(' + d.substring(0,2) + ') ' + d.substring(2,7) + '-' + d.substring(7);
+            }
+            return String(valor);
+        },
+
+        _coletarDadosFormulario() {
+            let dados = {};
+            for (let chave in this._MAPA_CAMPOS) {
+                let el = document.getElementById(this._MAPA_CAMPOS[chave].id);
+                dados[chave] = el ? el.value : '';
+            }
+            return dados;
+        },
+
+        _comparar(dadosAtuais, dadosAPI) {
+            let divergencias = [];
+            for (let chave in this._MAPA_CAMPOS) {
+                let valorAtual = this._normalizar(chave, dadosAtuais[chave] || '');
+                let valorAPI = this._normalizar(chave, dadosAPI[chave] || '');
+                if (valorAtual !== valorAPI) {
+                    divergencias.push({
+                        chave: chave,
+                        label: this._MAPA_CAMPOS[chave].label,
+                        id: this._MAPA_CAMPOS[chave].id,
+                        valorAtual: dadosAtuais[chave] || '',
+                        valorAPI: dadosAPI[chave] || '',
+                    });
+                }
+            }
+            return divergencias;
+        },
+
+        _renderTabela(divergencias) {
+            let tbody = document.getElementById('reconciliacaoTbody');
+            let semDiv = document.getElementById('reconciliacaoSemDivergencias');
+            let tabela = document.getElementById('reconciliacaoTabela');
+            let btnAtualizar = document.getElementById('btnReconciliacaoAtualizar');
+
+            if (divergencias.length === 0) {
+                tbody.innerHTML = '';
+                tabela.style.display = 'none';
+                semDiv.style.display = 'block';
+                btnAtualizar.disabled = true;
+                return;
+            }
+
+            tabela.style.display = '';
+            semDiv.style.display = 'none';
+            btnAtualizar.disabled = false;
+
+            let html = '';
+            for (let i = 0; i < divergencias.length; i++) {
+                let d = divergencias[i];
+                html += '<tr class="reconciliacao-divergente">';
+                html += '<td class="col-check"><input type="checkbox" class="reconciliacao-check-item" checked data-chave="' + d.chave + '"></td>';
+                html += '<td class="col-campo">' + this._esc(d.label) + '</td>';
+                html += '<td class="col-atual">' + this._esc(this._formatarParaExibicao(d.chave, d.valorAtual)) + '</td>';
+                html += '<td class="col-api">' + this._esc(this._formatarParaExibicao(d.chave, d.valorAPI)) + '</td>';
+                html += '</tr>';
+            }
+            tbody.innerHTML = html;
+        },
+
+        init(token, cnpj) {
+            this._token = token;
+            this._cnpj = cnpj;
+
+            let dadosAtuais = this._coletarDadosFormulario();
+
+            let btn = document.getElementById('btnReconciliacaoAtualizar');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Consultando...';
+
+            this._openModal('Consultando...');
+
+            let linkSite = document.getElementById('btnReconciliacaoSite');
+            linkSite.href = 'https://solucoes.receita.fazenda.gov.br/Servicos/cnpjreva/Cnpjreva_Solicitacao.asp?cnpj=' + cnpj;
+
+            google.script.run
+                .withSuccessHandler((data) => {
+                    btn.innerHTML = '<i class="bx bx-sync"></i> Atualizar selecionados';
+                    if (data && data.error) {
+                        Message.show(data.error, 'error');
+                        this.fechar();
+                        return;
+                    }
+                    this._dadosAPI = data;
+                    this._dadosAtuais = dadosAtuais;
+                    this._divergencias = this._comparar(dadosAtuais, data);
+
+                    document.getElementById('reconciliacaoSubtitle').textContent =
+                        'CNPJ: ' + this._formatarParaExibicao('cnpj', cnpj) +
+                        ' — ' + this._divergencias.length + ' divergência' + (this._divergencias.length !== 1 ? 's' : '') + ' encontrada' + (this._divergencias.length !== 1 ? 's' : '');
+
+                    this._renderTabela(this._divergencias);
+                })
+                .withFailureHandler(() => {
+                    btn.innerHTML = '<i class="bx bx-sync"></i> Atualizar selecionados';
+                    Message.show('Erro ao consultar Receita. Tente novamente.', 'error');
+                    this.fechar();
+                })
+                .conferirProprietarioEndpoint(this._token, cnpj);
+        },
+
+        _openModal(subtitle) {
+            document.getElementById('reconciliacaoSubtitle').textContent = subtitle || '';
+            document.getElementById('reconciliacaoTbody').innerHTML = '';
+            document.getElementById('reconciliacaoTabela').style.display = 'none';
+            document.getElementById('reconciliacaoSemDivergencias').style.display = 'none';
+            document.getElementById('reconciliacaoModal').style.display = 'flex';
+        },
+
+        fechar() {
+            document.getElementById('reconciliacaoModal').style.display = 'none';
+        },
+
+        atualizarSelecionados() {
+            let checkboxes = document.querySelectorAll('.reconciliacao-check-item:checked');
+            if (checkboxes.length === 0) {
+                Message.show('Selecione ao menos um campo para atualizar.', 'error');
+                return;
+            }
+
+            for (let i = 0; i < checkboxes.length; i++) {
+                let chave = checkboxes[i].dataset.chave;
+                let info = this._MAPA_CAMPOS[chave];
+                if (!info) continue;
+                let el = document.getElementById(info.id);
+                if (!el) continue;
+
+                let valorAPI = this._dadosAPI[chave] || '';
+                el.value = valorAPI;
+
+                el.classList.add('cnpj-filled');
+                setTimeout(() => el.classList.remove('cnpj-filled'), 2000);
+            }
+
+            Message.show(checkboxes.length + ' campo' + (checkboxes.length !== 1 ? 's' : '') + ' atualizado' + (checkboxes.length !== 1 ? 's' : '') + ' no formulário.', 'success');
+            this.fechar();
+        },
+
+        _esc(text) {
+            let div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        },
+    };
+
+    // --- Eventos do modal ---
+    (function initReconciliacaoEvents() {
+        let checkAll = document.getElementById('reconciliacaoCheckAll');
+        if (checkAll) {
+            checkAll.addEventListener('change', function () {
+                document.querySelectorAll('.reconciliacao-check-item').forEach((cb) => {
+                    cb.checked = this.checked;
+                });
+            });
+        }
+
+        document.getElementById('reconciliacaoTbody').addEventListener('change', function () {
+            let total = document.querySelectorAll('.reconciliacao-check-item').length;
+            let checked = document.querySelectorAll('.reconciliacao-check-item:checked').length;
+            let ca = document.getElementById('reconciliacaoCheckAll');
+            if (ca) ca.checked = total > 0 && total === checked;
+        });
+
+        document.getElementById('btnReconciliacaoFechar').addEventListener('click', function () { Reconciliacao.fechar(); });
+        document.getElementById('btnReconciliacaoFecharAcao').addEventListener('click', function () { Reconciliacao.fechar(); });
+        document.getElementById('btnReconciliacaoAtualizar').addEventListener('click', function () { Reconciliacao.atualizarSelecionados(); });
+        document.getElementById('reconciliacaoModal').addEventListener('click', function (e) {
+            if (e.target === e.currentTarget) Reconciliacao.fechar();
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && document.getElementById('reconciliacaoModal').style.display === 'flex') {
+                Reconciliacao.fechar();
+            }
+        });
+    })();
+</script>

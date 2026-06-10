@@ -320,3 +320,118 @@ function consultarMunicipioEndpoint(token, municipio) {
         return { error: error.message };
     }
 }
+
+/**
+ * Endpoint: consulta dados do CNPJ na Receita para conferencia.
+ * Exposto via google.script.run.conferirProprietarioEndpoint(token, cnpj).
+ * Reutiliza a funcao consultarCNPJ() existente.
+ * @param {string} token UUID da sessão
+ * @param {string} cnpj CNPJ com ou sem máscara
+ * @returns {Object} Dados do proprietário ou {error: string}
+ */
+function conferirProprietarioEndpoint(token, cnpj) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    console.log('[conferirProprietarioEndpoint] CNPJ:', cnpj ? cnpj.substring(0, 6) + '...' : 'null');
+    try {
+        return consultarCNPJ(cnpj);
+    } catch (error) {
+        console.error('[conferirProprietarioEndpoint] erro:', error.message);
+        return { error: error.message };
+    }
+}
+
+/**
+ * Endpoint: retorna todos os instrumentos cadastrados.
+ * Exposto via google.script.run.listarInstrumentosEndpoint(token).
+ * @param {string} token UUID da sessão
+ * @returns {Array|Object} Array de instrumentos ou {error: string}
+ */
+function listarInstrumentosEndpoint(token) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    try {
+        return listarInstrumentos();
+    } catch (error) {
+        console.error('[listarInstrumentosEndpoint] erro:', error.message);
+        return { error: error.message };
+    }
+}
+
+/**
+ * Endpoint: retorna escopos de um proprietário.
+ * Exposto via google.script.run.listarEscoposPorProprietarioEndpoint(token, idProprietario).
+ * @param {string} token UUID da sessão
+ * @param {number} idProprietario ID do proprietário
+ * @returns {Array|Object} Array de escopos ou {error: string}
+ */
+function listarEscoposPorProprietarioEndpoint(token, idProprietario) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    try {
+        return listarEscoposPorProprietario(idProprietario);
+    } catch (error) {
+        console.error('[listarEscoposPorProprietarioEndpoint] erro:', error.message);
+        return { error: error.message };
+    }
+}
+
+/**
+ * Endpoint: insere novo escopo para um proprietário.
+ * Exposto via google.script.run.inserirEscopoEndpoint(token, idProprietario, codigoEscopo, codigoInstrumento, dadosExtras).
+ * @param {string} token UUID da sessão
+ * @param {number} idProprietario ID do proprietário
+ * @param {string} codigoEscopo Código do escopo
+ * @param {number} codigoInstrumento ID do instrumento
+ * @param {string} dadosExtras JSON string com dados extras
+ * @returns {Object} {success: boolean, message: string, id?: number}
+ */
+function inserirEscopoEndpoint(token, idProprietario, codigoEscopo, codigoInstrumento, dadosExtras) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    try {
+        var id = inserirEscopo(idProprietario, codigoEscopo, codigoInstrumento, dadosExtras);
+        return { success: true, message: 'Escopo cadastrado com sucesso.', id: id };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Endpoint: atualiza escopo existente.
+ * Exposto via google.script.run.atualizarEscopoEndpoint(token, idEscopo, codigoEscopo, codigoInstrumento, dadosExtras).
+ * @param {string} token UUID da sessão
+ * @param {number} idEscopo ID do escopo
+ * @param {string} codigoEscopo Novo código do escopo
+ * @param {number} codigoInstrumento Novo ID do instrumento
+ * @param {string} dadosExtras Novo JSON string de dados extras
+ * @returns {Object} {success: boolean, message: string}
+ */
+function atualizarEscopoEndpoint(token, idEscopo, codigoEscopo, codigoInstrumento, dadosExtras) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    try {
+        atualizarEscopo(idEscopo, codigoEscopo, codigoInstrumento, dadosExtras);
+        return { success: true, message: 'Escopo atualizado com sucesso.' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
+
+/**
+ * Endpoint: exclui escopo.
+ * Exposto via google.script.run.excluirEscopoEndpoint(token, idEscopo).
+ * @param {string} token UUID da sessão
+ * @param {number} idEscopo ID do escopo a excluir
+ * @returns {Object} {success: boolean, message: string}
+ */
+function excluirEscopoEndpoint(token, idEscopo) {
+    var email = validateSession(token);
+    if (!email) return { success: false, message: 'Sessao invalida.' };
+    try {
+        excluirEscopo(idEscopo);
+        return { success: true, message: 'Escopo excluido com sucesso.' };
+    } catch (error) {
+        return { success: false, message: error.message };
+    }
+}
