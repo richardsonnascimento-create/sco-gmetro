@@ -676,3 +676,92 @@ function consultarCNPJ(cnpj) {
 //         console.error('Erro no exemplo:', error.message);
 //     }
 // }
+
+// ============================================================
+// Municipio_SGI — consulta de regional/sigla/codigo por municipio
+// ============================================================
+
+/** Nome da aba com dados de municipios do SGI. */
+var SHEET_NAME_MUNICIPIO_SGI = 'Municipio_SGI';
+
+/**
+ * Colunas da aba Municipio_SGI na ordem do cabecalho.
+ * Indices: 0=idRegionais, 1=regional, 2=municipio, 3=cod, 4=sigla, 5=municipioAcentuado
+ */
+var COLUNAS_MUNICIPIO_SGI = [
+    'idRegionais',
+    'regional',
+    'municipio',
+    'cod',
+    'sigla',
+    'municipioAcentuado',
+];
+
+/**
+ * Obtem a aba "Municipio_SGI" na planilha DB_Principal.
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet}
+ * @throws {Error} Se a aba nao existir
+ */
+function getMunicipioSGISheet() {
+    var spreadsheet = SpreadsheetApp.openById(DB_Principal);
+    var sheet = spreadsheet.getSheetByName(SHEET_NAME_MUNICIPIO_SGI);
+    if (!sheet) {
+        throw new Error('Aba "' + SHEET_NAME_MUNICIPIO_SGI + '" nao encontrada.');
+    }
+    return sheet;
+}
+
+/**
+ * Remove acentos e converte para minusculo (busca case-insensitive).
+ * GAS V8 nao suporta String.prototype.normalize().
+ * @param {string} texto Texto de entrada
+ * @returns {string} Texto normalizado sem acentos
+ */
+function _removerAcentos(texto) {
+    var map = {
+        'á': 'a', 'à': 'a', 'ã': 'a', 'â': 'a', 'ä': 'a',
+        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+        'í': 'i', 'ì': 'i', 'î': 'i', 'ï': 'i',
+        'ó': 'o', 'ò': 'o', 'õ': 'o', 'ô': 'o', 'ö': 'o',
+        'ú': 'u', 'ù': 'u', 'û': 'u', 'ü': 'u',
+        'ç': 'c', 'ñ': 'n',
+    };
+    var lower = String(texto).toLowerCase();
+    var result = '';
+    for (var i = 0; i < lower.length; i++) {
+        result += map[lower[i]] || lower[i];
+    }
+    return result;
+}
+
+/**
+ * Consulta a aba Municipio_SGI pelo nome do municipio.
+ * A busca eh case-insensitive e ignora acentos, comparando
+ * tanto com a coluna municipio quanto com municipioAcentuado.
+ * @param {string} municipio Nome do municipio digitado pelo usuario
+ * @returns {Object} {regional, sigla, codigoMunicipio} ou {error: string}
+ */
+function consultarMunicipio(municipio) {
+    if (!municipio || String(municipio).trim() === '') {
+        return { error: 'Informe o municipio.' };
+    }
+
+    var sheet = getMunicipioSGISheet();
+    var data = sheet.getDataRange().getValues();
+    var termo = _removerAcentos(String(municipio).trim());
+
+    for (var i = 1; i < data.length; i++) {
+        var nome = _removerAcentos(String(data[i][2] || ''));
+        var nomeAcentuado = _removerAcentos(String(data[i][5] || ''));
+
+        if (nome === termo || nomeAcentuado === termo) {
+            return {
+                regional: String(data[i][1] || ''),
+                sigla: String(data[i][4] || ''),
+                codigoMunicipio: String(data[i][3] || ''),
+            };
+        }
+    }
+
+    return { error: 'Municipio nao encontrado na base SGI.' };
+}

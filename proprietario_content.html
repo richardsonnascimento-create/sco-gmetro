@@ -88,6 +88,7 @@
                         <div class="input-wrapper">
                             <i class="bx bx-chip input-icon"></i>
                             <input type="text" id="CNAE" placeholder="0000-0/00">
+                            <i class="bx validation-icon" id="CNAEIcon"></i>
                         </div>
                     </div>
                 </div>
@@ -169,13 +170,6 @@
                         </div>
                     </div>
 
-                    <div class="form-group">
-                        <label for="codigoMunicipio">Cód. Município</label>
-                        <div class="input-wrapper">
-                            <i class="bx bx-hash input-icon"></i>
-                            <input type="text" id="codigoMunicipio" placeholder="Código IBGE">
-                        </div>
-                    </div>
                 </div>
             </fieldset>
 
@@ -203,13 +197,16 @@
             </fieldset>
 
             <fieldset class="proprietario-fieldset">
-                <legend><i class="bx bx-detail"></i> Informações Complementares</legend>
+                <legend><i class="bx bx-detail"></i> Dados do SGI</legend>
                 <div class="fieldset-grid">
                     <div class="form-group">
-                        <label for="proprietario">Proprietário</label>
+                        <label for="proprietario">
+                            Número do Proprietário (SGI) <span class="required-star">*</span>
+                            <span class="required-hint">(obrigatório)</span>
+                        </label>
                         <div class="input-wrapper">
                             <i class="bx bx-user-circle input-icon"></i>
-                            <input type="text" id="proprietario" placeholder="Nome da pessoa física">
+                            <input type="text" id="proprietario" required aria-required="true" placeholder="Número interno SGI">
                         </div>
                     </div>
 
@@ -222,18 +219,40 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="regional">Regional</label>
-                        <div class="input-wrapper">
-                            <i class="bx bx-map-alt input-icon"></i>
-                            <input type="text" id="regional">
+                        <label for="regional">
+                            Regional <span class="required-star">*</span>
+                            <span class="required-hint">(obrigatório)</span>
+                        </label>
+                        <div class="cnpj-input-row">
+                            <div class="input-wrapper" style="flex:1;">
+                                <i class="bx bx-map-alt input-icon"></i>
+                                <input type="text" id="regional" required aria-required="true">
+                            </div>
+                            <button type="button" id="btnBuscarRegional" class="btn-consultar-cnpj" title="Buscar dados regionais do município">
+                                <i class="bx bx-map-alt"></i> Regional
+                            </button>
                         </div>
                     </div>
 
                     <div class="form-group">
-                        <label for="sigla">Sigla</label>
+                        <label for="sigla">
+                            Sigla <span class="required-star">*</span>
+                            <span class="required-hint">(obrigatório)</span>
+                        </label>
                         <div class="input-wrapper">
                             <i class="bx bx-abbreviation input-icon"></i>
-                            <input type="text" id="sigla" maxlength="10" placeholder="Sigla">
+                            <input type="text" id="sigla" maxlength="10" required aria-required="true" placeholder="Sigla">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="codigoMunicipio">
+                            Cód. Município <span class="required-star">*</span>
+                            <span class="required-hint">(obrigatório)</span>
+                        </label>
+                        <div class="input-wrapper">
+                            <i class="bx bx-hash input-icon"></i>
+                            <input type="text" id="codigoMunicipio" required aria-required="true" placeholder="Código IBGE">
                         </div>
                     </div>
 
@@ -269,14 +288,16 @@
         _sortState: { col: null, dir: 'asc' },
         _lastConsultedCNPJ: '',
         _consultarTimer: null,
+        _listLoaded: false,
 
         init(token) {
             console.log('[Proprietario] init iniciado');
             this.token = token;
             this._allProprietarios = [];
             this._initialFormData = null;
+            this._listLoaded = false;
             this.bindEvents();
-            this.loadList();
+            this._showLoadPlaceholder();
         },
 
         bindEvents() {
@@ -295,7 +316,6 @@
                 btnCancelar.addEventListener('click', () => {
                     if (this._isDirty() && !confirm('Há alterações não salvas. Deseja cancelar?')) return;
                     this.showList();
-                    this.loadList();
                 });
             }
 
@@ -322,11 +342,15 @@
                 });
             }
 
+            let btnRegional = document.getElementById('btnBuscarRegional');
+            if (btnRegional) {
+                btnRegional.addEventListener('click', () => this.buscarRegional());
+            }
+
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape' && document.getElementById('proprietarioFormView').style.display !== 'none') {
                     if (this._isDirty() && !confirm('Há alterações não salvas. Deseja cancelar?')) return;
                     this.showList();
-                    this.loadList();
                 }
             });
 
@@ -401,6 +425,10 @@
                     masked += digits[i];
                 }
                 return masked;
+            });
+
+            this._maskInput('CNAE', (digits) => {
+                return digits.substring(0, 7);
             });
         },
 
@@ -566,6 +594,19 @@
                     this._validateSingleField('email', Validation.validateEmail, 'E-mail inválido');
                 });
             }
+
+            // CNAE
+            let cnae = document.getElementById('CNAE');
+            if (cnae) {
+                cnae.addEventListener('blur', () => {
+                    if (!cnae.value) { this._clearFieldError(cnae); return; }
+                    if (Validation.validarCNAE(cnae.value)) {
+                        this._showFieldValid(cnae);
+                    } else {
+                        this._showFieldError(cnae, 'Não conforme. Códigos permitidos: 3314710 ou 3312102');
+                    }
+                });
+            }
         },
 
         _bindSearch() {
@@ -574,14 +615,20 @@
 
             searchInput.addEventListener('input', () => {
                 clearTimeout(this._searchTimer);
-                this._searchTimer = setTimeout(() => this._applyFilters(), 300);
+                this._searchTimer = setTimeout(() => {
+                    if (!this._listLoaded) { this.loadList(); return; }
+                    this._applyFilters();
+                }, 300);
             });
         },
 
         _bindFilterSelect() {
             let filter = document.getElementById('situacaoFilter');
             if (filter) {
-                filter.addEventListener('change', () => this._applyFilters());
+                filter.addEventListener('change', () => {
+                    if (!this._listLoaded) { this.loadList(); return; }
+                    this._applyFilters();
+                });
             }
         },
 
@@ -590,10 +637,12 @@
             if (search) search.value = '';
             let filter = document.getElementById('situacaoFilter');
             if (filter) filter.value = '';
+            if (!this._listLoaded) { this.loadList(); return; }
             this._applyFilters();
         },
 
         _applyFilters() {
+            if (!this._listLoaded) return;
             let searchVal = (document.getElementById('proprietarioSearch').value || '').toLowerCase().trim();
             let situacaoVal = document.getElementById('situacaoFilter').value;
 
@@ -614,6 +663,9 @@
             const formView = document.getElementById('proprietarioFormView');
             if (listView) listView.style.display = 'block';
             if (formView) formView.style.display = 'none';
+            if (!this._listLoaded) {
+                this._showLoadPlaceholder();
+            }
         },
 
         showForm(data, editId) {
@@ -715,6 +767,25 @@
             container.innerHTML = html;
         },
 
+        _showLoadPlaceholder() {
+            let container = document.getElementById('proprietarioTableContainer');
+            if (!container) return;
+            let countEl = document.getElementById('proprietarioRecordCount');
+            if (countEl) countEl.textContent = '';
+            container.innerHTML =
+                '<div class="admin-empty placeholder-load">' +
+                    '<i class="bx bx-folder-open" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
+                    '<p>Clique no botão abaixo para carregar a lista de proprietários.</p>' +
+                    '<button type="button" class="btn-primary" id="btnCarregarLista" style="margin-top:12px;">' +
+                        '<i class="bx bx-download"></i> Carregar Proprietários' +
+                    '</button>' +
+                '</div>';
+            let btnCarregar = document.getElementById('btnCarregarLista');
+            if (btnCarregar) {
+                btnCarregar.addEventListener('click', () => this.loadList());
+            }
+        },
+
         loadList() {
             const container = document.getElementById('proprietarioTableContainer');
             if (!container) return;
@@ -731,12 +802,14 @@
                             container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
                             return;
                         }
+                        this._listLoaded = true;
                         this._allProprietarios = data || [];
                         this._sortState = { col: null, dir: 'asc' };
                         this.renderTable(this._allProprietarios);
                     })
                     .withFailureHandler((error) => {
                         Loading.hide();
+                        this._listLoaded = false;
                         console.error('[Proprietario] Erro no loadList:', error);
                         container.innerHTML = '<div class="admin-empty">Erro ao carregar dados.</div>';
                         Message.show('Erro ao carregar proprietários.', 'error');
@@ -963,6 +1036,11 @@
                 return false;
             }
 
+            if (!dados.proprietario || !dados.regional || !dados.sigla || !dados.codigoMunicipio) {
+                Message.show('Preencha todos os campos obrigatórios de Dados do SGI.', 'error');
+                return false;
+            }
+
             return true;
         },
 
@@ -1134,6 +1212,28 @@
 
                     this._lastConsultedCNPJ = cnpj;
                     this._setFormData(data);
+
+                    // --- Validação do CNAE ---
+                    let cnaeInput = document.getElementById('CNAE');
+                    let cnaeVal = cnaeInput ? cnaeInput.value.trim() : '';
+                    if (cnaeVal && !Validation.validarCNAE(cnaeVal)) {
+                        this._showFieldError(cnaeInput, 'Não conforme. Códigos permitidos: 3314710 ou 3312102');
+                    } else if (cnaeInput) {
+                        this._clearFieldError(cnaeInput);
+                    }
+
+                    // --- Mapeamento da situação cadastral ---
+                    let situacaoApi = (data.situacaoCadastral || '').toUpperCase();
+                    let situacaoMapeada = 'Ativo';
+                    if (situacaoApi.indexOf('ATIVA') !== -1) {
+                        situacaoMapeada = 'Ativo';
+                    } else if (situacaoApi.indexOf('SUSPENSA') !== -1 || situacaoApi.indexOf('SUSPENSO') !== -1) {
+                        situacaoMapeada = 'Suspenso';
+                    } else if (situacaoApi.indexOf('BAIXADA') !== -1 || situacaoApi.indexOf('INAPTA') !== -1 || situacaoApi.indexOf('INATIVO') !== -1) {
+                        situacaoMapeada = 'Inativo';
+                    }
+                    document.getElementById('situacaoCadastral').value = situacaoMapeada;
+
                     Message.show('CNPJ consultado com sucesso!', 'success');
                     this._highlightFilledFields();
                 })
@@ -1146,11 +1246,54 @@
                 .consultarCnpjEndpoint(this.token, cnpj);
         },
 
+        buscarRegional() {
+            let munInput = document.getElementById('municipio');
+            if (!munInput) return;
+
+            let municipio = munInput.value.trim();
+            if (!municipio) {
+                Message.show('Informe o municipio antes de buscar.', 'error');
+                return;
+            }
+
+            let btn = document.getElementById('btnBuscarRegional');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i>';
+            btn.title = 'Buscando...';
+
+            google.script.run
+                .withSuccessHandler((data) => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-map-alt"></i> Regional';
+                    btn.title = 'Buscar dados regionais do município';
+
+                    if (data && data.error) {
+                        Message.show(data.error, 'error');
+                        return;
+                    }
+
+                    document.getElementById('regional').value = data.regional || '';
+                    document.getElementById('sigla').value = data.sigla || '';
+                    document.getElementById('codigoMunicipio').value = data.codigoMunicipio || '';
+
+                    Message.show('Dados regionais carregados com sucesso!', 'success');
+                    this._highlightFilledFields();
+                })
+                .withFailureHandler(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bx bx-map-alt"></i> Regional';
+                    btn.title = 'Buscar dados regionais do município';
+                    Message.show('Servico temporariamente indisponivel. Preencha manualmente.', 'error');
+                })
+                .consultarMunicipioEndpoint(this.token, municipio);
+        },
+
         _highlightFilledFields() {
             let fields = [
                 'razaoSocial', 'logradouro', 'numero', 'complemento',
                 'bairro', 'municipio', 'UF', 'CEP', 'email',
                 'telefone', 'situacaoCadastral', 'CNAE',
+                'regional', 'sigla', 'codigoMunicipio',
             ];
             fields.forEach((id) => {
                 let el = document.getElementById(id);

@@ -301,3 +301,22 @@ function consultarCnpjEndpoint(token, cnpj) {
         return { error: error.message };
     }
 }
+
+/**
+ * Endpoint: consulta municipio na base SGI (requer sessão válida).
+ * Exposto via google.script.run.consultarMunicipioEndpoint(token, municipio).
+ * @param {string} token UUID da sessão
+ * @param {string} municipio Nome do municipio digitado
+ * @returns {Object} {regional, sigla, codigoMunicipio} ou {error: string}
+ */
+function consultarMunicipioEndpoint(token, municipio) {
+    var email = validateSession(token);
+    if (!email) return { error: 'Sessao invalida.' };
+    console.log('[consultarMunicipioEndpoint] municipio:', municipio);
+    try {
+        return consultarMunicipio(municipio);
+    } catch (error) {
+        console.error('[consultarMunicipioEndpoint] erro:', error.message);
+        return { error: error.message };
+    }
+}

@@ -73,6 +73,18 @@
         },
 
         /**
+         * Valida se o CNAE é um dos códigos permitidos: 3314710 ou 3312102.
+         * Campo vazio é considerado válido (não obrigatório).
+         * @param {string} cnae
+         * @returns {boolean}
+         */
+        validarCNAE: function(cnae) {
+            var valor = String(cnae).replace(/\D/g, '').trim();
+            if (valor === '') return true;
+            return valor === '3314710' || valor === '3312102';
+        },
+
+        /**
          * Formata CNPJ: XX.XXX.XXX/XXXX-XX
          * @param {string} cnpj
          * @returns {string}
