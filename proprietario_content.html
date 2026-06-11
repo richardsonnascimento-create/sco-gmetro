@@ -269,19 +269,27 @@
                 </div>
             </fieldset>
 
-            <!-- Seção de Escopos (visível apenas ao editar) -->
-            <div id="escopoSection" class="escopo-section" style="display: none;">
-                <div class="escopo-section-header">
-                    <h3><i class="bx bx-list-ul"></i> Escopos de Serviço</h3>
-                    <button type="button" class="btn-primary btn-sm" id="btnNovoEscopo">
-                        <i class="bx bx-plus"></i> Novo Escopo
-                    </button>
-                </div>
-                <p class="escopo-subtitle" id="escopoSubtitle">Gerencie os escopos de serviço deste proprietário.</p>
+            <!-- Seção de Escopos (carregamento sob demanda) -->
+            <fieldset id="escopoSection" class="proprietario-fieldset" style="display: none;">
+                <legend>
+                    <i class="bx bx-list-ul"></i> Escopos de Serviço
+                    <div class="escopo-section-actions">
+                        <button type="button" class="btn-primary btn-sm" id="btnCarregarEscopos">
+                            <i class="bx bx-download"></i> Carregar Escopos
+                        </button>
+                        <button type="button" class="btn-primary btn-sm" id="btnNovoEscopo" style="display:none;">
+                            <i class="bx bx-plus"></i> Novo Escopo
+                        </button>
+                    </div>
+                </legend>
+                <p class="escopo-subtitle" id="escopoSubtitle"></p>
                 <div id="escopoTableContainer">
-                    <div class="admin-empty">Nenhum escopo cadastrado.</div>
+                    <div class="admin-empty placeholder-load">
+                        <i class="bx bx-folder-open" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i>
+                        <p>Clique em "Carregar Escopos" para visualizar os escopos deste proprietário.</p>
+                    </div>
                 </div>
-            </div>
+            </fieldset>
 
             <div class="form-actions full-width">
                 <button type="submit" class="btn-primary" id="btnSalvarProprietario">
@@ -348,6 +356,81 @@
 </div>
 
 <script>
+    var Confirm = {
+        _resolve: null,
+
+        _ensureOverlay() {
+            if (document.getElementById('confirmOverlay')) return;
+
+            var overlay = document.createElement('div');
+            overlay.id = 'confirmOverlay';
+            overlay.className = 'confirm-overlay';
+            overlay.style.display = 'none';
+            overlay.setAttribute('role', 'dialog');
+            overlay.setAttribute('aria-modal', 'true');
+
+            var modal = document.createElement('div');
+            modal.className = 'confirm-modal';
+
+            var msg = document.createElement('p');
+            msg.id = 'confirmMessage';
+            msg.className = 'confirm-message';
+            modal.appendChild(msg);
+
+            var actions = document.createElement('div');
+            actions.className = 'confirm-actions';
+
+            var cancelBtn = document.createElement('button');
+            cancelBtn.type = 'button';
+            cancelBtn.className = 'btn-secondary';
+            cancelBtn.id = 'confirmCancelBtn';
+            cancelBtn.textContent = 'Cancelar';
+            actions.appendChild(cancelBtn);
+
+            var okBtn = document.createElement('button');
+            okBtn.type = 'button';
+            okBtn.className = 'btn-primary';
+            okBtn.id = 'confirmOkBtn';
+            okBtn.textContent = 'Confirmar';
+            actions.appendChild(okBtn);
+
+            modal.appendChild(actions);
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            okBtn.addEventListener('click', function() {
+                Confirm._resolveAndHide(true);
+            });
+            cancelBtn.addEventListener('click', function() {
+                Confirm._resolveAndHide(false);
+            });
+            overlay.addEventListener('click', function(e) {
+                if (e.target === e.currentTarget) Confirm._resolveAndHide(false);
+            });
+        },
+
+        show(message, confirmText, cancelText) {
+            this._ensureOverlay();
+            var self = this;
+            return new Promise(function(resolve) {
+                self._resolve = resolve;
+                document.getElementById('confirmMessage').textContent = message;
+                if (confirmText) document.getElementById('confirmOkBtn').textContent = confirmText;
+                if (cancelText) document.getElementById('confirmCancelBtn').textContent = cancelText;
+                document.getElementById('confirmOverlay').style.display = 'flex';
+            });
+        },
+
+        _resolveAndHide(result) {
+            if (this._resolve) {
+                this._resolve(result);
+                this._resolve = null;
+            }
+            var overlay = document.getElementById('confirmOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+    };
+
     var Proprietario = {
         token: null,
         editId: null,
@@ -367,6 +450,9 @@
             this._listLoaded = false;
             this.bindEvents();
             this._showLoadPlaceholder();
+            if (typeof Escopo !== 'undefined' && Escopo.init) {
+                Escopo.init(token);
+            }
         },
 
         bindEvents() {
@@ -382,8 +468,15 @@
 
             let btnCancelar = document.getElementById('btnCancelarProprietario');
             if (btnCancelar) {
-                btnCancelar.addEventListener('click', () => {
-                    if (this._isDirty() && !confirm('Há alterações não salvas. Deseja cancelar?')) return;
+                btnCancelar.addEventListener('click', async () => {
+                    if (this._isDirty()) {
+                        const confirmed = await Confirm.show(
+                            'Há alterações não salvas. Deseja descartar as alterações?',
+                            'Sim, descartar',
+                            'Continuar editando'
+                        );
+                        if (!confirmed) return;
+                    }
                     this.showList();
                 });
             }
@@ -421,9 +514,16 @@
                 btnConferir.addEventListener('click', () => this.conferirReceita());
             }
 
-            document.addEventListener('keydown', (e) => {
+            document.addEventListener('keydown', async (e) => {
                 if (e.key === 'Escape' && document.getElementById('proprietarioFormView').style.display !== 'none') {
-                    if (this._isDirty() && !confirm('Há alterações não salvas. Deseja cancelar?')) return;
+                    if (this._isDirty()) {
+                        const confirmed = await Confirm.show(
+                            'Há alterações não salvas. Deseja descartar as alterações?',
+                            'Sim, descartar',
+                            'Continuar editando'
+                        );
+                        if (!confirmed) return;
+                    }
                     this.showList();
                 }
             });
@@ -750,6 +850,9 @@
             const formView = document.getElementById('proprietarioFormView');
             if (listView) listView.style.display = 'block';
             if (formView) formView.style.display = 'none';
+            if (typeof Escopo !== 'undefined') {
+                Escopo.resetSection();
+            }
             if (!this._listLoaded) {
                 this._showLoadPlaceholder();
             }
@@ -774,20 +877,27 @@
                 this._clearValidationIcons();
             }
 
-            // Mostra ou esconde a seção de escopos
-            const escopoSection = document.getElementById('escopoSection');
-            if (escopoSection) {
-                if (editId) {
-                    escopoSection.style.display = 'block';
-                    if (typeof Escopo !== 'undefined') {
-                        Escopo.init(this.token, editId);
-                    }
-                } else {
-                    escopoSection.style.display = 'none';
-                }
-            }
+            this._setupEscopoSection(editId);
 
             this._snapshotFormData();
+        },
+
+        _setupEscopoSection(editId) {
+            const escopoSection = document.getElementById('escopoSection');
+            if (!escopoSection) return;
+
+            if (editId) {
+                escopoSection.style.display = 'block';
+                if (typeof Escopo !== 'undefined') {
+                    Escopo.resetSection();
+                    Escopo.setProprietarioId(editId);
+                }
+            } else {
+                escopoSection.style.display = 'none';
+                if (typeof Escopo !== 'undefined') {
+                    Escopo.resetSection();
+                }
+            }
         },
 
         _clearValidationIcons() {
@@ -1082,12 +1192,13 @@
             }
         },
 
-        confirmDelete(id, nome) {
+        async confirmDelete(id, nome) {
             let msg = nome
                 ? 'Excluir "' + nome + '" (ID ' + id + ')?'
                 : 'Excluir proprietário ID ' + id + '?';
 
-            if (!confirm(msg)) return;
+            const confirmed = await Confirm.show(msg, 'Excluir', 'Cancelar');
+            if (!confirmed) return;
 
             Loading.show();
             if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -1452,18 +1563,60 @@
         _instrumentos: [],
         _instrumentoMap: {},
         _escopos: [],
+        _loaded: false,
+        _eventsBound: false,
+        _isEditingEscopo: false,
 
-        init(token, idProprietario) {
+        init(token) {
             this.token = token;
-            this.idProprietario = idProprietario;
+            this.resetSection();
+            if (!this._eventsBound) {
+                this.bindEvents();
+                this._eventsBound = true;
+            }
+        },
+
+        setProprietarioId(id) {
+            this.idProprietario = id;
+        },
+
+        resetSection() {
             this._instrumentos = [];
             this._instrumentoMap = {};
             this._escopos = [];
-            this.bindEvents();
-            this.loadInstrumentos();
+            this._loaded = false;
+            this.idProprietario = null;
+            this._isEditingEscopo = false;
+
+            const container = document.getElementById('escopoTableContainer');
+            if (container) {
+                container.innerHTML =
+                    '<div class="admin-empty placeholder-load">' +
+                        '<i class="bx bx-folder-open" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
+                        '<p>Clique em "Carregar Escopos" para visualizar os escopos deste proprietário.</p>' +
+                    '</div>';
+            }
+
+            const btnNovo = document.getElementById('btnNovoEscopo');
+            if (btnNovo) btnNovo.style.display = 'none';
+
+            const btnCarregar = document.getElementById('btnCarregarEscopos');
+            if (btnCarregar) {
+                btnCarregar.style.display = 'inline-flex';
+                btnCarregar.disabled = false;
+                btnCarregar.innerHTML = '<i class="bx bx-download"></i> Carregar Escopos';
+            }
+
+            const subtitle = document.getElementById('escopoSubtitle');
+            if (subtitle) subtitle.textContent = '';
         },
 
         bindEvents() {
+            const btnCarregar = document.getElementById('btnCarregarEscopos');
+            if (btnCarregar) {
+                btnCarregar.addEventListener('click', () => this.load());
+            }
+
             const btnNovo = document.getElementById('btnNovoEscopo');
             if (btnNovo) {
                 btnNovo.addEventListener('click', () => this.showModal(null));
@@ -1495,7 +1648,6 @@
                 if (e.key === 'Escape') this.hideModal();
             });
 
-            // Botões de classe da BALANÇA
             document.querySelectorAll('.btn-classe').forEach((btn) => {
                 btn.addEventListener('click', (e) => {
                     const classe = btn.dataset.classe;
@@ -1508,16 +1660,29 @@
             });
         },
 
-        loadInstrumentos() {
+        load() {
+            if (!this.idProprietario) return;
+
+            const btnCarregar = document.getElementById('btnCarregarEscopos');
+            if (btnCarregar) {
+                btnCarregar.disabled = true;
+                btnCarregar.innerHTML = '<i class="bx bx-loader-alt bx-spin"></i> Carregando...';
+            }
+
             const container = document.getElementById('escopoTableContainer');
-            if (!container) return;
-            container.innerHTML = '<div class="admin-empty placeholder-load"><i class="bx bx-loader-alt bx-spin" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i><p>Carregando instrumentos...</p></div>';
+            if (container) {
+                container.innerHTML = '<div class="admin-empty placeholder-load"><i class="bx bx-loader-alt bx-spin" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i><p>Carregando instrumentos...</p></div>';
+            }
+
+            Loading.show();
 
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((data) => {
                         if (data && data.error) {
-                            container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
+                            Loading.hide();
+                            if (container) container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
+                            this._resetCarregarBtn();
                             return;
                         }
                         this._instrumentos = data || [];
@@ -1526,14 +1691,24 @@
                             this._instrumentoMap[this._instrumentos[i].id] = this._instrumentos[i].nome;
                         }
                         this._populateSelect();
-                        this.loadEscopos();
+                        this._loadEscopos();
                     })
                     .withFailureHandler((error) => {
+                        Loading.hide();
                         console.error('[Escopo] Erro ao carregar instrumentos:', error);
-                        container.innerHTML = '<div class="admin-empty">Erro ao carregar instrumentos.</div>';
+                        if (container) container.innerHTML = '<div class="admin-empty">Erro ao carregar instrumentos.</div>';
+                        this._resetCarregarBtn();
                         Message.show('Erro ao carregar instrumentos.', 'error');
                     })
                     .listarInstrumentosEndpoint(this.token);
+            }
+        },
+
+        _resetCarregarBtn() {
+            const btnCarregar = document.getElementById('btnCarregarEscopos');
+            if (btnCarregar) {
+                btnCarregar.disabled = false;
+                btnCarregar.innerHTML = '<i class="bx bx-download"></i> Carregar Escopos';
             }
         },
 
@@ -1549,24 +1724,42 @@
             }
         },
 
-        loadEscopos() {
+        _loadEscopos() {
             const container = document.getElementById('escopoTableContainer');
-            if (!container) return;
-            container.innerHTML = '<div class="admin-empty placeholder-load"><i class="bx bx-loader-alt bx-spin" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i><p>Carregando escopos...</p></div>';
+            if (container) {
+                container.innerHTML = '<div class="admin-empty placeholder-load"><i class="bx bx-loader-alt bx-spin" style="font-size:48px;color:#ccc;display:block;margin-bottom:12px;"></i><p>Carregando escopos...</p></div>';
+            }
 
             if (typeof google !== 'undefined' && google.script && google.script.run) {
                 google.script.run
                     .withSuccessHandler((data) => {
+                        Loading.hide();
+
                         if (data && data.error) {
-                            container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
+                            if (container) container.innerHTML = '<div class="admin-empty">' + this._esc(data.error) + '</div>';
+                            this._resetCarregarBtn();
                             return;
                         }
+
                         this._escopos = data || [];
+                        this._loaded = true;
+
+                        const btnCarregar = document.getElementById('btnCarregarEscopos');
+                        if (btnCarregar) btnCarregar.style.display = 'none';
+
+                        const btnNovo = document.getElementById('btnNovoEscopo');
+                        if (btnNovo) btnNovo.style.display = 'inline-flex';
+
+                        const subtitle = document.getElementById('escopoSubtitle');
+                        if (subtitle) subtitle.textContent = 'Gerencie os escopos de serviço deste proprietário.';
+
                         this.renderTable();
                     })
                     .withFailureHandler((error) => {
+                        Loading.hide();
                         console.error('[Escopo] Erro ao carregar escopos:', error);
-                        container.innerHTML = '<div class="admin-empty">Erro ao carregar escopos.</div>';
+                        if (container) container.innerHTML = '<div class="admin-empty">Erro ao carregar escopos.</div>';
+                        this._resetCarregarBtn();
                         Message.show('Erro ao carregar escopos.', 'error');
                     })
                     .listarEscoposPorProprietarioEndpoint(this.token, this.idProprietario);
@@ -1587,7 +1780,6 @@
             html += '<thead><tr>';
             html += '<th>Código Escopo</th>';
             html += '<th>Instrumento</th>';
-            html += '<th>Carga Máx</th>';
             html += '<th>Classe de Exatidão</th>';
             html += '<th>Ações</th>';
             html += '</tr></thead><tbody>';
@@ -1595,18 +1787,16 @@
             for (let i = 0; i < this._escopos.length; i++) {
                 let e = this._escopos[i];
                 let de = e.dadosExtras || {};
-                let carga = de.cargaMaxima || '-';
                 let classe = de.classeExatidao || '-';
                 let nomeInst = this._instrumentoMap[e.codigoInstrumento] || e.nomeInstrumento || 'Desconhecido';
 
                 html += '<tr>';
                 html += '<td data-label="Código">' + this._esc(e.codigoEscopo) + '</td>';
                 html += '<td data-label="Instrumento">' + this._esc(nomeInst) + '</td>';
-                html += '<td data-label="Carga Máx">' + this._esc(carga) + '</td>';
                 html += '<td data-label="Classe">' + this._esc(classe) + '</td>';
                 html += '<td data-label="Ações">';
-                html += '<button class="btn-icon btn-edit" data-id="' + e.idEscopo + '" title="Editar" aria-label="Editar escopo"><i class="bx bx-edit"></i></button> ';
-                html += '<button class="btn-icon btn-delete" data-id="' + e.idEscopo + '" data-codigo="' + this._esc(e.codigoEscopo) + '" title="Excluir" aria-label="Excluir escopo"><i class="bx bx-trash"></i></button>';
+                html += '<button type="button" class="btn-icon btn-edit" data-id="' + e.idEscopo + '" title="Editar" aria-label="Editar escopo"><i class="bx bx-edit"></i></button> ';
+                html += '<button type="button" class="btn-icon btn-delete" data-id="' + e.idEscopo + '" data-codigo="' + this._esc(e.codigoEscopo) + '" title="Excluir" aria-label="Excluir escopo"><i class="bx bx-trash"></i></button>';
                 html += '</td>';
                 html += '</tr>';
             }
@@ -1641,7 +1831,7 @@
                 titulo.innerHTML = editId ? '<i class="bx bx-edit"></i> Editar Escopo' : '<i class="bx bx-file"></i> Novo Escopo';
             }
             if (editHidden) editHidden.value = editId || '';
-            if (select) select.value = data ? (data.codigoInstrumento || '') : '';
+            if (select) select.value = data ? String(data.codigoInstrumento || '') : '';
             if (codigoInput) codigoInput.value = data ? (data.codigoEscopo || '') : '';
 
             this._setDadosExtras(data ? (data.dadosExtras || {}) : {});
@@ -1674,10 +1864,10 @@
                 }
             }
 
-            if (nomeInst.toUpperCase() === 'BALANCA') {
-                camposBalanca.style.display = 'block';
-            } else {
-                camposBalanca.style.display = 'none';
+            const isBalanca = (nomeInst.toUpperCase() === 'BALANCA');
+            camposBalanca.style.display = isBalanca ? 'block' : 'none';
+
+            if (!isBalanca) {
                 document.getElementById('cargaValor').value = '';
                 document.getElementById('classeExatidao').value = '';
             }
@@ -1690,7 +1880,6 @@
 
             if (nomeInst.toUpperCase() === 'BALANCA') {
                 return JSON.stringify({
-                    cargaValor: document.getElementById('cargaValor').value.trim(),
                     classeExatidao: document.getElementById('classeExatidao').value.trim(),
                 });
             }
@@ -1734,8 +1923,17 @@
 
         _setDadosExtras(dadosExtras) {
             const de = dadosExtras || {};
-            document.getElementById('cargaValor').value = de.cargaValor || '';
-            document.getElementById('classeExatidao').value = de.classeExatidao || '';
+            const classe = de.classeExatidao || '';
+            document.getElementById('classeExatidao').value = classe;
+
+            let cargaExtraida = de.cargaMaxima || '';
+            if (!cargaExtraida && classe) {
+                const match = classe.match(/ATE\s+([\d.,]+)\s+kg/i);
+                if (match) {
+                    cargaExtraida = match[1].replace(',', '.');
+                }
+            }
+            document.getElementById('cargaValor').value = cargaExtraida;
         },
 
         save(event) {
@@ -1773,7 +1971,7 @@
                     if (response.success) {
                         Message.show(response.message, 'success');
                         this.hideModal();
-                        this.loadEscopos();
+                        this._loadEscopos();
                     } else {
                         Message.show(response.message, 'error');
                     }
@@ -1810,12 +2008,13 @@
             }
         },
 
-        confirmDelete(id, codigo) {
+        async confirmDelete(id, codigo) {
             let msg = codigo
                 ? 'Excluir escopo "' + codigo + '" (ID ' + id + ')?'
                 : 'Excluir escopo ID ' + id + '?';
 
-            if (!confirm(msg)) return;
+            const confirmed = await Confirm.show(msg, 'Excluir', 'Cancelar');
+            if (!confirmed) return;
 
             Loading.show();
             if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -1824,7 +2023,7 @@
                         Loading.hide();
                         if (response.success) {
                             Message.show(response.message, 'success');
-                            this.loadEscopos();
+                            this._loadEscopos();
                         } else {
                             Message.show(response.message, 'error');
                         }

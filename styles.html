@@ -723,6 +723,40 @@
         }
     }
 
+    /* === Confirm Dialog === */
+    .confirm-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 3000;
+        padding: 16px;
+    }
+
+    .confirm-modal {
+        background: var(--white);
+        border-radius: 12px;
+        padding: 24px;
+        width: 90%;
+        max-width: 400px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .confirm-message {
+        margin: 0 0 20px;
+        font-size: 15px;
+        color: var(--text-color);
+        line-height: 1.5;
+    }
+
+    .confirm-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+    }
+
     /* Estilos para o componente de loading */
     .loading-overlay {
         display: none;
@@ -1735,6 +1769,31 @@
 
     /* ============== ESCOPO ============== */
 
+    .escopo-section-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 8px;
+    }
+
+    .proprietario-fieldset legend {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .escopo-subtitle {
+        margin: 0 0 16px;
+        font-size: 14px;
+        color: #666;
+    }
+
+    .proprietario-fieldset .placeholder-load p {
+        color: #888;
+        font-size: 14px;
+    }
+
     .escopo-header {
         display: flex;
         justify-content: space-between;
@@ -1804,10 +1863,21 @@
         color: var(--text-color);
     }
 
-    .modal-escopo .form-group select,
-    .modal-escopo .form-group input {
+    .modal-escopo .form-group select {
         width: 100%;
         padding: 10px 12px;
+        border: 1.5px solid #d0d0d0;
+        border-radius: 8px;
+        font-size: 14px;
+        outline: none;
+        transition: border-color 0.2s;
+        background: var(--white);
+        box-sizing: border-box;
+    }
+
+    .modal-escopo .form-group input {
+        width: 100%;
+        padding: 10px 12px 10px 40px;
         border: 1.5px solid #d0d0d0;
         border-radius: 8px;
         font-size: 14px;
@@ -1952,6 +2022,17 @@
         .escopo-header-left {
             flex-direction: column;
             align-items: stretch;
+        }
+
+        .proprietario-fieldset legend {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .escopo-section-actions {
+            margin-left: 0;
+            flex-direction: column;
+            width: 100%;
         }
 
         .modal-escopo {
