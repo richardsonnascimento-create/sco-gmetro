@@ -55,8 +55,8 @@
             municipio: { label: 'Município', id: 'municipio' },
             UF: { label: 'UF', id: 'UF' },
             CEP: { label: 'CEP', id: 'CEP' },
-            telefone: { label: 'Telefone', id: 'telefone' },
-            email: { label: 'E-mail', id: 'email' },
+            telefone: { label: 'Telefone', id: 'telefone', isMulti: true },
+            email: { label: 'E-mail', id: 'email', isMulti: true },
             situacaoCadastral: { label: 'Situação Cadastral', id: 'situacaoCadastral' },
             CNAE: { label: 'CNAE', id: 'CNAE' },
         },
@@ -107,19 +107,56 @@
             return dados;
         },
 
+        _normalizarItem(chave, valor) {
+            if (!valor) return '';
+            var str = String(valor).trim();
+            if (chave === 'telefone') {
+                return str.replace(/\D/g, '');
+            }
+            if (chave === 'email') {
+                return str.toLowerCase();
+            }
+            return str;
+        },
+
         _comparar(dadosAtuais, dadosAPI) {
+            var self = this;
             let divergencias = [];
             for (let chave in this._MAPA_CAMPOS) {
-                let valorAtual = this._normalizar(chave, dadosAtuais[chave] || '');
-                let valorAPI = this._normalizar(chave, dadosAPI[chave] || '');
-                if (valorAtual !== valorAPI) {
-                    divergencias.push({
-                        chave: chave,
-                        label: this._MAPA_CAMPOS[chave].label,
-                        id: this._MAPA_CAMPOS[chave].id,
-                        valorAtual: dadosAtuais[chave] || '',
-                        valorAPI: dadosAPI[chave] || '',
+                let rawAtual = dadosAtuais[chave] || '';
+                let rawAPI = dadosAPI[chave] || '';
+                let info = self._MAPA_CAMPOS[chave];
+
+                if (info.isMulti) {
+                    var currentItems = rawAtual.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+                    var currentNorms = currentItems.map(function(item) { return self._normalizarItem(chave, item); });
+                    var apiItems = rawAPI.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+                    var hasMissing = apiItems.some(function(apiItem) {
+                        return currentNorms.indexOf(self._normalizarItem(chave, apiItem)) === -1;
                     });
+                    if (hasMissing) {
+                        divergencias.push({
+                            chave: chave,
+                            label: info.label,
+                            id: info.id,
+                            isMulti: true,
+                            valorAtual: rawAtual,
+                            valorAPI: rawAPI,
+                        });
+                    }
+                } else {
+                    var normAtual = self._normalizar(chave, rawAtual);
+                    var normAPI = self._normalizar(chave, rawAPI);
+                    if (normAtual !== normAPI) {
+                        divergencias.push({
+                            chave: chave,
+                            label: info.label,
+                            id: info.id,
+                            isMulti: false,
+                            valorAtual: rawAtual,
+                            valorAPI: rawAPI,
+                        });
+                    }
                 }
             }
             return divergencias;
@@ -147,7 +184,7 @@
             for (let i = 0; i < divergencias.length; i++) {
                 let d = divergencias[i];
                 html += '<tr class="reconciliacao-divergente">';
-                html += '<td class="col-check"><input type="checkbox" class="reconciliacao-check-item" checked data-chave="' + d.chave + '"></td>';
+                html += '<td class="col-check"><input type="checkbox" class="reconciliacao-check-item" checked data-idx="' + i + '"></td>';
                 html += '<td class="col-campo">' + this._esc(d.label) + '</td>';
                 html += '<td class="col-atual">' + this._esc(this._formatarParaExibicao(d.chave, d.valorAtual)) + '</td>';
                 html += '<td class="col-api">' + this._esc(this._formatarParaExibicao(d.chave, d.valorAPI)) + '</td>';
@@ -217,14 +254,39 @@
             }
 
             for (let i = 0; i < checkboxes.length; i++) {
-                let chave = checkboxes[i].dataset.chave;
-                let info = this._MAPA_CAMPOS[chave];
-                if (!info) continue;
-                let el = document.getElementById(info.id);
+                let idx = parseInt(checkboxes[i].dataset.idx, 10);
+                let div = this._divergencias[idx];
+                if (!div) continue;
+                let el = document.getElementById(div.id);
                 if (!el) continue;
 
-                let valorAPI = this._dadosAPI[chave] || '';
-                el.value = valorAPI;
+                let chave = div.chave;
+
+                if (div.isMulti) {
+                    var valorAtual = el.value.trim();
+                    var currentItems = valorAtual.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+                    var apiItems = div.valorAPI.split(',').map(function(s) { return s.trim(); }).filter(Boolean);
+
+                    for (var a = 0; a < apiItems.length; a++) {
+                        var apiNorm = this._normalizarItem(chave, apiItems[a]);
+                        var exists = currentItems.some(function(item) {
+                            return this._normalizarItem(chave, item) === apiNorm;
+                        }, this);
+                        if (!exists) {
+                            var displayItem = apiItems[a];
+                            if (chave === 'telefone') {
+                                displayItem = Validation.formatarTelefone(apiItems[a]);
+                            }
+                            currentItems.push(displayItem);
+                        }
+                    }
+                    el.value = currentItems.join(', ');
+                } else {
+                    el.value = div.valorAPI;
+                    if (chave === 'telefone') {
+                        el.value = Validation.formatarTelefone(el.value);
+                    }
+                }
 
                 el.classList.add('cnpj-filled');
                 setTimeout(() => el.classList.remove('cnpj-filled'), 2000);

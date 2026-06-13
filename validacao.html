@@ -5,6 +5,25 @@
             return re.test(String(email).toLowerCase().trim());
         },
 
+        validateMultipleEmails(emailString) {
+            if (!emailString || !emailString.trim()) return true;
+            var emails = emailString.split(',').map(function(e) { return e.trim(); });
+            for (var i = 0; i < emails.length; i++) {
+                if (emails[i] && !this.validateEmail(emails[i])) return false;
+            }
+            return true;
+        },
+
+        validateMultiplePhones(phoneString) {
+            if (!phoneString || !phoneString.trim()) return true;
+            var phones = phoneString.split(',').map(function(p) { return p.trim().replace(/\D/g, ''); });
+            for (var i = 0; i < phones.length; i++) {
+                if (!phones[i]) continue;
+                if (phones[i].length < 10 || phones[i].length > 11) return false;
+            }
+            return true;
+        },
+
         validatePassword(password) {
             return password.length >= 6;
         },

@@ -189,6 +189,16 @@ function _validarTelefone_(tel) {
 }
 
 /**
+ * Valida um endereço de e-mail com regex.
+ * @param {string} email
+ * @returns {boolean}
+ */
+function _validarEmail_(email) {
+    var re = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+    return re.test(String(email).toLowerCase().trim());
+}
+
+/**
  * Insere um novo proprietário na aba "Proprietarios".
  * Valida duplicidade de CNPJ antes de inserir. Gera ID automaticamente.
  * Usa LockService para evitar duplicatas em requisições simultâneas.
@@ -220,7 +230,24 @@ function inserirProprietario(dados) {
     if (!dados.cnpjProprietario) throw new Error('CNPJ obrigatorio.');
     if (!_validarCNPJ_(dados.cnpjProprietario)) throw new Error('CNPJ invalido.');
     if (dados.CEP && !_validarCEP_(dados.CEP)) throw new Error('CEP invalido.');
-    if (dados.telefone && !_validarTelefone_(dados.telefone)) throw new Error('Telefone invalido.');
+    if (dados.telefone) {
+        var tList = String(dados.telefone).split(',').map(function(t) { return t.trim(); });
+        for (var ti = 0; ti < tList.length; ti++) {
+            if (tList[ti] && !_validarTelefone_(tList[ti])) {
+                throw new Error('Telefone invalido: "' + tList[ti] + '".');
+            }
+        }
+        dados.telefone = tList.join(',');
+    }
+    if (dados.email) {
+        var eList = String(dados.email).split(',').map(function(e) { return e.trim(); });
+        for (var ei = 0; ei < eList.length; ei++) {
+            if (eList[ei] && !_validarEmail_(eList[ei])) {
+                throw new Error('E-mail invalido: "' + eList[ei] + '".');
+            }
+        }
+        dados.email = eList.join(',');
+    }
 
     var lock = LockService.getScriptLock();
     lock.tryLock(10000);
@@ -284,7 +311,24 @@ function inserirProprietario(dados) {
 function atualizarProprietario(idProprietario, dados) {
     if (!_validarCNPJ_(dados.cnpjProprietario)) throw new Error('CNPJ invalido.');
     if (dados.CEP && !_validarCEP_(dados.CEP)) throw new Error('CEP invalido.');
-    if (dados.telefone && !_validarTelefone_(dados.telefone)) throw new Error('Telefone invalido.');
+    if (dados.telefone) {
+        var tList = String(dados.telefone).split(',').map(function(t) { return t.trim(); });
+        for (var ti = 0; ti < tList.length; ti++) {
+            if (tList[ti] && !_validarTelefone_(tList[ti])) {
+                throw new Error('Telefone invalido: "' + tList[ti] + '".');
+            }
+        }
+        dados.telefone = tList.join(',');
+    }
+    if (dados.email) {
+        var eList = String(dados.email).split(',').map(function(e) { return e.trim(); });
+        for (var ei = 0; ei < eList.length; ei++) {
+            if (eList[ei] && !_validarEmail_(eList[ei])) {
+                throw new Error('E-mail invalido: "' + eList[ei] + '".');
+            }
+        }
+        dados.email = eList.join(',');
+    }
 
     var lock = LockService.getScriptLock();
     lock.tryLock(10000);

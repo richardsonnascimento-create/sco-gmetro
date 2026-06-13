@@ -183,7 +183,7 @@
                         <label for="email">E-mail</label>
                         <div class="input-wrapper">
                             <i class="bx bx-envelope input-icon"></i>
-                            <input type="email" id="email" placeholder="contato@exemplo.com">
+                            <input type="text" id="email" placeholder="contato@exemplo.com, contato2@exemplo.com">
                             <i class="bx validation-icon" id="emailIcon"></i>
                         </div>
                     </div>
@@ -192,7 +192,7 @@
                         <label for="telefone">Telefone</label>
                         <div class="input-wrapper">
                             <i class="bx bx-phone input-icon"></i>
-                            <input type="text" id="telefone" placeholder="(00) 00000-0000" maxlength="15">
+                            <input type="text" id="telefone" placeholder="(00) 00000-0000, (00) 0000-0000">
                             <i class="bx validation-icon" id="telefoneIcon"></i>
                         </div>
                     </div>
@@ -589,18 +589,6 @@
                     : digits;
             });
 
-            this._maskInput('telefone', (digits) => {
-                digits = digits.substring(0, 11);
-                let masked = '';
-                for (let i = 0; i < digits.length; i++) {
-                    if (i === 0) masked += '(';
-                    if (i === 2) masked += ') ';
-                    if (i === 7) masked += '-';
-                    masked += digits[i];
-                }
-                return masked;
-            });
-
             this._maskInput('CNAE', (digits) => {
                 return digits.substring(0, 7);
             });
@@ -681,6 +669,54 @@
             }
         },
 
+        _validateMultipleEmails(input) {
+            if (!input.value.trim()) {
+                this._clearFieldError(input);
+                return true;
+            }
+            var emails = input.value.split(',').map(e => e.trim());
+            for (var i = 0; i < emails.length; i++) {
+                if (emails[i] && !Validation.validateEmail(emails[i])) {
+                    this._showFieldError(input, 'E-mail inválido: "' + emails[i] + '"');
+                    return false;
+                }
+            }
+            this._showFieldValid(input);
+            return true;
+        },
+
+        _validateMultiplePhones(input) {
+            if (!input.value.trim()) {
+                this._clearFieldError(input);
+                return true;
+            }
+            var phones = input.value.split(',').map(e => e.trim());
+            for (var i = 0; i < phones.length; i++) {
+                if (!phones[i]) continue;
+                var digits = phones[i].replace(/\D/g, '');
+                if (digits.length < 10 || digits.length > 11) {
+                    this._showFieldError(input, 'Telefone inválido: "' + phones[i] + '"');
+                    return false;
+                }
+            }
+            this._showFieldValid(input);
+            return true;
+        },
+
+        _formatPhoneField(input) {
+            if (!input.value.trim()) return;
+            var parts = input.value.split(',').map(e => e.trim());
+            var formatted = parts.map(function(p) {
+                var d = p.replace(/\D/g, '');
+                if (d.length === 10)
+                    return '(' + d.substring(0,2) + ') ' + d.substring(2,6) + '-' + d.substring(6,10);
+                if (d.length === 11)
+                    return '(' + d.substring(0,2) + ') ' + d.substring(2,7) + '-' + d.substring(7,11);
+                return p;
+            }).join(', ');
+            input.value = formatted;
+        },
+
         _fetchEnderecoPorCEP(cep) {
             let digits = String(cep).replace(/\D/g, '');
             if (digits.length !== 8) return;
@@ -753,19 +789,21 @@
                 });
             }
 
-            // Telefone
+            // Telefone (múltiplos, separados por vírgula)
             let tel = document.getElementById('telefone');
             if (tel) {
                 tel.addEventListener('blur', () => {
-                    this._validateSingleField('telefone', Validation.validarTelefone, 'Telefone deve ter 10 ou 11 dígitos');
+                    if (this._validateMultiplePhones(tel)) {
+                        this._formatPhoneField(tel);
+                    }
                 });
             }
 
-            // E-mail
+            // E-mail (múltiplos, separados por vírgula)
             let email = document.getElementById('email');
             if (email) {
                 email.addEventListener('blur', () => {
-                    this._validateSingleField('email', Validation.validateEmail, 'E-mail inválido');
+                    this._validateMultipleEmails(email);
                 });
             }
 
@@ -922,7 +960,8 @@
             document.getElementById('municipio').value = data.municipio || '';
             document.getElementById('UF').value = data.UF || '';
             document.getElementById('email').value = data.email || '';
-            document.getElementById('telefone').value = Validation.formatarTelefone(data.telefone) || '';
+            document.getElementById('telefone').value = data.telefone || '';
+            this._formatPhoneField(document.getElementById('telefone'));
             document.getElementById('situacaoCadastral').value = data.situacaoCadastral || 'Ativo';
             document.getElementById('CNAE').value = data.CNAE || '';
             document.getElementById('proprietario').value = data.proprietario || '';
@@ -954,8 +993,14 @@
                 bairro: document.getElementById('bairro').value.trim(),
                 municipio: document.getElementById('municipio').value.trim(),
                 UF: document.getElementById('UF').value,
-                email: document.getElementById('email').value.trim(),
-                telefone: document.getElementById('telefone').value.replace(/\D/g, ''),
+                email: (() => {
+                    var raw = document.getElementById('email').value.trim();
+                    return raw ? raw.split(',').map(e => e.trim()).join(',') : '';
+                })(),
+                telefone: (() => {
+                    var raw = document.getElementById('telefone').value.trim();
+                    return raw ? raw.split(',').map(e => e.trim()).join(', ') : '';
+                })(),
                 situacaoCadastral: document.getElementById('situacaoCadastral').value,
                 CNAE: document.getElementById('CNAE').value.trim(),
                 proprietario: document.getElementById('proprietario').value.trim(),
@@ -1240,10 +1285,19 @@
                 return false;
             }
 
-            if (dados.telefone && !Validation.validarTelefone(dados.telefone)) {
-                Message.show('Telefone inválido. Deve ter 10 ou 11 dígitos.', 'error');
-                let telInput = document.getElementById('telefone');
-                if (telInput) { telInput.focus(); telInput.select(); }
+            let telInput = document.getElementById('telefone');
+            if (telInput && !this._validateMultiplePhones(telInput)) {
+                Message.show('Um ou mais telefones são inválidos.', 'error');
+                telInput.focus();
+                telInput.select();
+                return false;
+            }
+
+            let emailInput = document.getElementById('email');
+            if (emailInput && !this._validateMultipleEmails(emailInput)) {
+                Message.show('Um ou mais e-mails são inválidos.', 'error');
+                emailInput.focus();
+                emailInput.select();
                 return false;
             }
 
@@ -1273,6 +1327,9 @@
 
         save(event) {
             event.preventDefault();
+
+            var telInput = document.getElementById('telefone');
+            if (telInput && telInput.value.trim()) this._formatPhoneField(telInput);
 
             let dados = this._getFormData();
             if (!this._preValidate(dados)) return;
